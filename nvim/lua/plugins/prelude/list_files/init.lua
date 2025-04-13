@@ -9,8 +9,8 @@ local M = {}
 -- Configuration with default values
 local config = {
     height = 0.8, -- 80% of the screen height
-    width = 0.8,  -- 80% of the screen width
-    list_width = 0.3, -- 30% of the window width for the list pane
+    width = 1.0,  -- 80% of the screen width
+    list_width = 0.4, -- 30% of the window width for the list pane
     border = "rounded",
 }
 
