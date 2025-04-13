@@ -81,6 +81,8 @@ vim.keymap.set('n', 'gr', lsp.references, { desc = 'Go to references' })
 vim.keymap.set('n', 'gi', lsp.implementation, { desc = 'Go to implementation' })
 vim.keymap.set('n', 'K', lsp.hover, { desc = 'Show documentation' })
 vim.keymap.set('n', '<leader>d', lsp.diagnostics, { desc = 'Show diagnostics' })
+vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnostic' })
+vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous diagnostic' })
 local display = require('plugins.prelude.list_files.init')
 
 vim.keymap.set('n', '<leader>f', function()
