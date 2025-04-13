@@ -75,16 +75,16 @@ local lsp = require('lsp')
 lsp.setup()
 
 -- LSP keymaps
-vim.keymap.set('n', 'gd', lsp.definition, { desc = 'Go to definition' })
-vim.keymap.set('n', 'gr', lsp.references, { desc = 'Go to references' })
-vim.keymap.set('n', 'gi', lsp.implementation, { desc = 'Go to implementation' })
-vim.keymap.set('n', 'K', lsp.hover, { desc = 'Show documentation' })
-vim.keymap.set('n', '<leader>d', lsp.diagnostics, { desc = 'Show diagnostics' })
+vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = 'Go to definition' })
+vim.keymap.set('n', 'gr', vim.lsp.buf.references, { desc = 'Go to references' })
+vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, { desc = 'Go to implementation' })
+vim.keymap.set('n', 'K', vim.lsp.buf.hover, { desc = 'Show documentation' })
+vim.keymap.set('n', '<leader>d', vim.diagnostic.setqflist, { desc = 'Show diagnostics' })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnostic' })
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous diagnostic' })
 local display = require('plugins.prelude.list_files.init')
 
-vim.keymap.set('n', '<leader>ff', function()
+vim.keymap.set('n', '<leader>f', function()
     local cwd = vim.fn.getcwd()
     local files = {}
 
@@ -125,23 +125,7 @@ vim.keymap.set('i', '<Tab>', function()
   end
 end, { expr = true, noremap = true })
 
-vim.keymap.set('n', '<leader>gg', function()
-  -- Check if quickfix is already open
-  local is_qf_open = vim.fn.empty(vim.fn.filter(vim.fn.getwininfo(), 'v:val.quickfix')) == 0
-
-  if is_qf_open then
-    -- If quickfix is open, close it
-    vim.cmd.cclose()
-  else
-    -- If closed, open with grep prompt
-    vim.cmd.copen()
-    -- Get user input for grep pattern
-    local pattern = vim.fn.input('Grep pattern: ')
-    if pattern ~= '' then
-      vim.cmd('silent grep! ' .. pattern)
-    end
-  end
-end, { desc = 'Toggle Grep Quickfix' })
+vim.keymap.set('n', '<leader>g', ":copen | :silent :grep ", { desc = 'Toggle Grep Quickfix' })
 vim.keymap.set('n', '<leader>q', function()
   local qf_winnr = vim.fn.getqflist({winid = 1}).winid
   if qf_winnr ~= 0 and vim.api.nvim_win_is_valid(qf_winnr) then
