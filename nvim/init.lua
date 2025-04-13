@@ -134,3 +134,23 @@ vim.keymap.set('n', '<leader>q', function()
 end)
 vim.keymap.set('n', '<leader>]q', ":cnext <CR>")
 vim.keymap.set('n', '<leader>[q', ":cprevious <CR>")
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = "*.go",
+  callback = function()
+    -- Run gofumpt and update the buffer if formatting succeeded
+    local filepath = vim.fn.expand("%:p")
+    vim.fn.jobstart({ "gofumpt", "-w", filepath }, {
+      on_exit = function(_, code)
+        if code == 0 then
+          vim.schedule(function()
+            -- Reload the file to apply changes
+            vim.cmd("edit!")
+          end)
+        else
+          vim.notify("gofumpt failed", vim.log.levels.ERROR)
+        end
+      end,
+    })
+  end,
+})
