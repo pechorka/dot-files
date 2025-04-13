@@ -82,6 +82,7 @@ vim.keymap.set('n', 'K', vim.lsp.buf.hover, { desc = 'Show documentation' })
 vim.keymap.set('n', '<leader>d', vim.diagnostic.setqflist, { desc = 'Show diagnostics' })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnostic' })
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous diagnostic' })
+vim.keymap.set('n', '<leader>cr', vim.lsp.buf.rename, { desc = 'Code action: Rename symbol' })
 local display = require('plugins.prelude.list_files.init')
 
 vim.keymap.set('n', '<leader>f', function()
