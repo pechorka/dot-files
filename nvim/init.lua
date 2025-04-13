@@ -3,7 +3,6 @@ vim.g.mapleader = " "
 
 -- Basic Neovim settings
 vim.opt.number = true
-vim.opt.relativenumber = true
 -- Number of spaces that a <Tab> counts for
 vim.opt.tabstop = 4
 -- Number of spaces to use for each step of (auto)indent
