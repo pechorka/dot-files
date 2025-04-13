@@ -83,26 +83,9 @@ vim.keymap.set('n', '<leader>d', vim.diagnostic.setqflist, { desc = 'Show diagno
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnostic' })
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous diagnostic' })
 vim.keymap.set('n', '<leader>cr', vim.lsp.buf.rename, { desc = 'Code action: Rename symbol' })
-local display = require('plugins.prelude.list_files.init')
 
-vim.keymap.set('n', '<leader>f', function()
-    local cwd = vim.fn.getcwd()
-    local files = {}
-
-    -- Find all files in current directory (excluding hidden files)
-    local handle = io.popen('find ' .. cwd .. ' -type d -name ".*" -prune -o -type f -print | sort')
-    if handle then
-        for file in handle:lines() do
-            -- Convert to path relative to cwd
-            local relative_path = file:sub(#cwd + 2)
-            table.insert(files, { path = relative_path })
-        end
-        handle:close()
-    end
-
-    -- Open display with relative paths
-    display.open(files, cwd)
-end)
+vim.opt.path:append('**')
+vim.keymap.set('n', '<leader>f', ":find ", { desc = 'Find file' })
 
 vim.bo.omnifunc = 'v:lua.vim.lsp.omnifunc'
 vim.opt.pumheight = 10
