@@ -280,7 +280,9 @@ function update_preview()
     
     -- Check if file exists and is readable
     if not util.file_exists(path) then
+        vim.api.nvim_buf_set_option(state.buffers.preview, 'modifiable', true)
         vim.api.nvim_buf_set_lines(state.buffers.preview, 0, -1, false, {"File not found: " .. path})
+        vim.api.nvim_buf_set_option(state.buffers.preview, 'modifiable', false)
         return
     end
     
@@ -288,7 +290,9 @@ function update_preview()
     local content = util.read_file_lines(path)
     
     -- Set file content to preview buffer
+    vim.api.nvim_buf_set_option(state.buffers.preview, 'modifiable', true)
     vim.api.nvim_buf_set_lines(state.buffers.preview, 0, -1, false, content)
+    vim.api.nvim_buf_set_option(state.buffers.preview, 'modifiable', false)
     
     -- Set filetype for syntax highlighting
     util.apply_syntax_highlighting(state.buffers.preview, path)
