@@ -84,7 +84,7 @@ vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnos
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous diagnostic' })
 local display = require('plugins.prelude.list_files.init')
 
-vim.keymap.set('n', '<leader>f', function()
+vim.keymap.set('n', '<leader>ff', function()
     local cwd = vim.fn.getcwd()
     local files = {}
 
@@ -124,3 +124,29 @@ vim.keymap.set('i', '<Tab>', function()
     end
   end
 end, { expr = true, noremap = true })
+
+vim.keymap.set('n', '<leader>gg', function()
+  -- Check if quickfix is already open
+  local is_qf_open = vim.fn.empty(vim.fn.filter(vim.fn.getwininfo(), 'v:val.quickfix')) == 0
+
+  if is_qf_open then
+    -- If quickfix is open, close it
+    vim.cmd.cclose()
+  else
+    -- If closed, open with grep prompt
+    vim.cmd.copen()
+    -- Get user input for grep pattern
+    local pattern = vim.fn.input('Grep pattern: ')
+    if pattern ~= '' then
+      vim.cmd('silent grep! ' .. pattern)
+    end
+  end
+end, { desc = 'Toggle Grep Quickfix' })
+vim.keymap.set('n', '<leader>q', function()
+  local qf_winnr = vim.fn.getqflist({winid = 1}).winid
+  if qf_winnr ~= 0 and vim.api.nvim_win_is_valid(qf_winnr) then
+    vim.api.nvim_set_current_win(qf_winnr)
+  end
+end)
+vim.keymap.set('n', '<leader>]q', ":cnext <CR>")
+vim.keymap.set('n', '<leader>[q', ":cprevious <CR>")
