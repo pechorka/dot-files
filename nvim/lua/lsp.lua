@@ -1,7 +1,5 @@
 -- lsp.lua - Language Server Protocol configuration
 
-local display = require('plugins.prelude.list_files.init')
-
 local function get_root_dir(root_files)
     local buf_path = vim.api.nvim_buf_get_name(0)
     local buf_dir = vim.fn.fnamemodify(buf_path, ':h')
