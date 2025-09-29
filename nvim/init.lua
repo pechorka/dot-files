@@ -1,140 +1,142 @@
--- Set leader key to space
-vim.g.mapleader = " "
+-- speed up module loads
+pcall(vim.loader.enable)
 
--- Basic Neovim settings
 vim.opt.number = true
--- Number of spaces that a <Tab> counts for
-vim.opt.tabstop = 4
--- Number of spaces to use for each step of (auto)indent
-vim.opt.shiftwidth = 4
--- Convert tabs to spaces
-vim.opt.expandtab = true
--- Do smart autoindenting when starting a new line
-vim.opt.smartindent = true
--- Don't wrap lines
+vim.opt.guicursor = ""
+vim.opt.signcolumn = "yes"
+vim.opt.winborder = "rounded"
 vim.opt.wrap = false
--- Don't create swap files
+
 vim.opt.swapfile = false
--- Don't create backup files
 vim.opt.backup = false
--- Highlight search results
+vim.opt.undodir = vim.fn.stdpath('state') .. '/undo'
+vim.opt.undofile = true
+
+vim.opt.autoindent = true
+vim.opt.smartindent = true
+
+vim.opt.tabstop = 2
+vim.opt.softtabstop = 2
+vim.opt.shiftwidth = 2
+vim.opt.expandtab = true
+
 vim.opt.hlsearch = true
--- Show search matches as you type
 vim.opt.incsearch = true
--- Enable 24-bit RGB color in the TUI
+
 vim.opt.termguicolors = true
--- Minimal number of screen lines to keep above and below the cursor
+
 vim.opt.scrolloff = 8
--- Faster completion (default is 4000ms)
 vim.opt.updatetime = 50
--- Show a vertical line at column 80
 vim.opt.colorcolumn = "120"
 
 vim.opt.smartcase = true
 vim.opt.ignorecase = true
--- Clear highlights on search when pressing <Esc> in normal mode
---  See `:help hlsearch`
-vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
--- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
--- instead raise a dialog asking if you wish to save the current file(s)
--- See `:help 'confirm'`
-vim.opt.confirm = true
+vim.opt.splitright = true
+vim.opt.splitbelow = true
+vim.opt.confirm = true   -- dialogs instead of failure on :q with changes
+vim.opt.timeoutlen = 400 -- crisper <leader> keyfeel
+vim.opt.cursorline = true
 
--- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
--- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
--- is not what someone will guess without a bit more experience.
---
--- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
--- or just use <C-\><C-n> to exit terminal mode
-vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+if vim.fn.has("clipboard") == 1 then
+  vim.opt.clipboard = "unnamedplus"
+end
 
--- sync vim and system clipboard
-vim.schedule(function()
-  vim.opt.clipboard = 'unnamedplus'
-end)
-
--- Highlight when yanking (copying) text
---  Try it with `yap` in normal mode
---  See `:help vim.highlight.on_yank()`
 vim.api.nvim_create_autocmd('TextYankPost', {
   desc = 'Highlight when yanking (copying) text',
-  group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
   callback = function()
     vim.highlight.on_yank()
   end,
 })
+vim.g.mapleader = " "
+vim.keymap.set("n", "-", vim.cmd.Ex)
+vim.keymap.set('n', 'F', vim.lsp.buf.format)
 
--- netrw
-vim.g.netrw_liststyle = 3
-vim.g.netrw_banner = 0
-vim.g.netrw_winsize = 25
+vim.keymap.set("x", "<leader>p", [["_dP]])       -- replace without yanking replaced text
+vim.keymap.set({ "n", "v" }, "<leader>d", '"_d') -- delete without yanking
+vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "remove search highlighting" })
 
+-- Quickfix navigation
+vim.keymap.set("n", "<C-k>", "<cmd>cnext<CR>zz")
+vim.keymap.set("n", "<C-j>", "<cmd>cprev<CR>zz")
 
-local lsp = require('lsp')
-lsp.setup()
+-- insert if err != nil {return err}
+vim.keymap.set("n", "<leader>ee", "oif err != nil {<CR>}<Esc>Oreturn err<Esc>bi")
 
--- LSP keymaps
-vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = 'Go to definition' })
-vim.keymap.set('n', 'gr', vim.lsp.buf.references, { desc = 'Go to references' })
-vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, { desc = 'Go to implementation' })
-vim.keymap.set('n', 'K', vim.lsp.buf.hover, { desc = 'Show documentation' })
-vim.keymap.set('n', '<leader>d', vim.diagnostic.setqflist, { desc = 'Show diagnostics' })
-vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnostic' })
-vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous diagnostic' })
-vim.keymap.set('n', '<leader>cr', vim.lsp.buf.rename, { desc = 'Code action: Rename symbol' })
+-- transform func name(arg1 string, arg2 string) in to
+-- func name(
+--   arg1 string,
+--   arg2 string,
+-- )
+vim.keymap.set("x", "<leader>as",
+  [[:s/\%V,\s*/__SPLIT_ARGUMENTS__/g<CR>:'<,'>s/(/(\r/<CR>:s/__SPLIT_ARGUMENTS__/,\r/g<CR>]],
+  { desc = "Split args on commas (visual)" })
 
-vim.opt.path:append('**')
-vim.keymap.set('n', '<leader>f', ":find ", { desc = 'Find file' })
+vim.cmd [[set completeopt+=menuone,noselect,popup]]
 
-vim.bo.omnifunc = 'v:lua.vim.lsp.omnifunc'
-vim.opt.pumheight = 10
-vim.opt.pumwidth = 40
-vim.opt.completeopt = { 'menuone', 'noselect', 'noinsert' }
-vim.lsp.set_log_level('off')
-vim.opt.shortmess:append('c')  -- Hide completion messages
--- Use <Tab> in insert mode to open completion
--- vim.keymap.set('i', '<Tab>', '<C-X><C-O>', { noremap = true })
--- Enhanced Tab key behavior
-vim.keymap.set('i', '<Tab>', function()
-  if vim.fn.pumvisible() == 1 then
-    return "<C-n>"
-  else
-    local col = vim.fn.col('.') - 1
-    if col == 0 or vim.fn.getline('.'):sub(col, col):match('%s') then
-      return "<Tab>"
-    else
-      vim.fn.feedkeys(vim.api.nvim_replace_termcodes('<C-X><C-O>', true, true, true), 'n')
-    end
-  end
-end, { expr = true, noremap = true })
+local function setup_blink()
+  require("blink.cmp").setup({
+    signature = { enabled = true },
+    completion = {
+      documentation = { auto_show = true, auto_show_delay_ms = 500 },
+      menu = {
+        auto_show = true,
+        draw = {
+          columns = { { "kind_icon", "label", "label_description", gap = 1 }, { "kind" } },
+        },
+      },
+    },
+    fuzzy = { implementation = 'lua' },
+  })
+end
 
-vim.keymap.set('n', '<leader>g', ":copen | :silent :grep ", { desc = 'Toggle Grep Quickfix' })
-vim.keymap.set('n', '<leader>q', function()
-  local qf_winnr = vim.fn.getqflist({winid = 1}).winid
-  if qf_winnr ~= 0 and vim.api.nvim_win_is_valid(qf_winnr) then
-    vim.api.nvim_set_current_win(qf_winnr)
-  end
-end)
-vim.keymap.set('n', '<leader>]q', ":cnext <CR>")
-vim.keymap.set('n', '<leader>[q', ":cprevious <CR>")
+local function setup_lsp()
+  local lsps = {
+    "lua_ls",
+    "gopls",         -- go install golang.org/x/tools/gopls@latest
+    "rust_analyzer", -- rustup component add rust-src
+    "pyright",       -- npm i -g pyright
+    "ts_ls",         -- npm i -g typescript typescript-language-server
+  }
+  vim.lsp.enable(lsps)
+  vim.api.nvim_create_autocmd("LspAttach", {
+    callback = function(ev)
+      local bufopts = { noremap = true, silent = true, buffer = ev.buf }
+      vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, bufopts)
+    end,
+  })
+end
 
-vim.api.nvim_create_autocmd("BufWritePre", {
-  pattern = "*.go",
-  callback = function()
-    -- Run gofumpt and update the buffer if formatting succeeded
-    local filepath = vim.fn.expand("%:p")
-    vim.fn.jobstart({ "gofumpt", "-w", filepath }, {
-      on_exit = function(_, code)
-        if code == 0 then
-          vim.schedule(function()
-            -- Reload the file to apply changes
-            vim.cmd("edit!")
-          end)
-        else
-          vim.notify("gofumpt failed", vim.log.levels.ERROR)
-        end
-      end,
-    })
-  end,
+local function setup_ts()
+  require("nvim-treesitter.configs").setup({
+    ensure_installed = {
+      "lua", "vim", "vimdoc", "regex",
+      "go", "gomod", "gosum",
+      "bash", "json", "jsonc", "yaml", "toml",
+      "markdown", "markdown_inline",
+      "python", "rust", "typescript", "tsx",
+    },
+    auto_install = true,
+    highlight = { enable = true, additional_vim_regex_highlighting = false },
+    indent = { enable = true },
+  })
+end
+
+local function setup_minipick()
+  require('mini.pick').setup()
+  vim.keymap.set('n', '<leader>ff', ':Pick files<CR>')
+  vim.keymap.set('n', '<leader>fg', ':Pick grep_live<CR>')
+  vim.keymap.set('n', '<leader>fh', ':Pick help<CR>')
+end
+
+vim.pack.add({
+  { src = 'https://github.com/neovim/nvim-lspconfig' },
+  { src = 'https://github.com/nvim-mini/mini.pick' },
+  { src = "https://github.com/Saghen/blink.cmp" },
+  { src = "https://github.com/m4xshen/hardtime.nvim" },
+  { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = 'master' },
 })
+setup_minipick()
+setup_blink()
+setup_ts()
+setup_lsp()
