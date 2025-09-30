@@ -10,6 +10,7 @@ end
 # pnpm end
 
 alias v nvim
+alias lg lazygit
 
 set -gx WASMTIME_HOME "$HOME/.wasmtime"
 
