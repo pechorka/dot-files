@@ -8,3 +8,6 @@
 !fish/**
 
 !.ripgreprc
+
+!tmux
+!tmux/**
