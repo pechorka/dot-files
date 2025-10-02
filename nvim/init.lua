@@ -49,8 +49,12 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 vim.g.mapleader = " "
+local git_utils = require('git_utils')
+
 vim.keymap.set("n", "-", vim.cmd.Ex)
 vim.keymap.set('n', 'F', vim.lsp.buf.format)
+
+vim.keymap.set('n', '<leader>cr', git_utils.copy_remote_url, { desc = 'Copy remote repository link' })
 
 vim.keymap.set("x", "<leader>p", [["_dP]])       -- replace without yanking replaced text
 vim.keymap.set({ "n", "v" }, "<leader>d", '"_d') -- delete without yanking
@@ -76,6 +80,7 @@ vim.cmd [[set completeopt+=menuone,noselect,popup]]
 
 local function setup_blink()
   require("blink.cmp").setup({
+    keymap = { preset = "super-tab" },
     signature = { enabled = true },
     completion = {
       documentation = { auto_show = true, auto_show_delay_ms = 500 },
@@ -97,6 +102,7 @@ local function setup_lsp()
     "rust_analyzer", -- rustup component add rust-src
     "pyright",       -- npm i -g pyright
     "ts_ls",         -- npm i -g typescript typescript-language-server
+    "jsonls",        -- npm i -g vscode-langservers-extracted
   }
   vim.lsp.enable(lsps)
   vim.api.nvim_create_autocmd("LspAttach", {
