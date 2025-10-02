@@ -1,13 +1,11 @@
 local M = {}
 
 local function git(args)
-  local cmd = { 'git' }
-  vim.list_extend(cmd, args)
-  local result = vim.fn.systemlist(cmd)
-  if vim.v.shell_error ~= 0 then
-    return nil, table.concat(result, '\n')
+  local proc = vim.system(vim.list_extend({ 'git' }, args), { text = true }):wait()
+  if proc.code ~= 0 then
+    return nil, (proc.stderr ~= '' and proc.stderr) or proc.stdout
   end
-  return result, nil
+  return vim.split(proc.stdout, '\n', { trimempty = true }), nil
 end
 
 local function git_remote()
@@ -17,28 +15,22 @@ local function git_remote()
   end
   -- no origin, try to get any remote
   local names, names_err = git({ 'remote' })
-  if not names or names_err then
+  if not names then
     return nil, names_err or 'no git remotes configured'
   end
   remotes, err = git({ 'remote', 'get-url', names[1] })
-  if not remotes or err then
+  if not remotes then
     return nil, err or 'failed to resolve git remote'
   end
   return remotes[1], nil
 end
 
 local function file_path_relative_to_root(root, file)
-  local nroot = vim.fs.normalize(root)
-  local nfile = vim.fs.normalize(file)
-  if nfile:sub(1, #nroot) ~= nroot then
-    return nil, 'file ' .. file .. ' is outside git repository ' .. nroot
+  local rel = vim.fs.relpath(root, file)
+  if not rel then
+    return nil, ('file %s is outside git repository %s'):format(file, root)
   end
-
-  local relative = nfile:sub(#nroot + 1, -1)
-  if relative:sub(1, 1) == '/' or relative:sub(1, 1) == '\\' then
-    return relative:sub(2)
-  end
-  return relative
+  return rel
 end
 
 local function urlencode(str)
@@ -123,25 +115,25 @@ function M.copy_remote_url()
   end
 
   local remote_url, remote_url_err = git_remote()
-  if not remote_url or remote_url_err then
+  if not remote_url then
     vim.notify('Failed to detect git remote url: ' .. (remote_url_err or 'unknown'), vim.log.levels.ERROR)
     return
   end
 
   local commit, commit_err = git({ 'rev-parse', 'HEAD' })
-  if not commit or commit_err then
+  if not commit then
     vim.notify('Failed to find current commit: ' .. (commit_err or 'unknown'), vim.log.levels.ERROR)
     return
   end
 
   local git_root, git_root_err = git({ 'rev-parse', '--show-toplevel' })
-  if not git_root or git_root_err then
+  if not git_root then
     vim.notify('Failed to detect git repo root: ' .. (git_root_err or 'unknown'), vim.log.levels.ERROR)
     return
   end
 
   local relative, relative_err = file_path_relative_to_root(git_root[1], current_file_path)
-  if not relative or relative_err then
+  if not relative then
     vim.notify('Failed to transform file path to relative: ' .. (relative_err or 'unknown'), vim.log.levels.ERROR)
     return
   end
@@ -165,13 +157,13 @@ function M.show_current_line_blame()
   end
 
   local git_root, git_root_err = git({ 'rev-parse', '--show-toplevel' })
-  if not git_root or git_root_err then
+  if not git_root then
     vim.notify('Failed to detect git repo root: ' .. (git_root_err or 'unknown'), vim.log.levels.ERROR)
     return
   end
 
   local relative, relative_err = file_path_relative_to_root(git_root[1], current_file_path)
-  if not relative or relative_err then
+  if not relative then
     vim.notify('Failed to transform file path to relative: ' .. (relative_err or 'unknown'), vim.log.levels.ERROR)
     return
   end
@@ -179,9 +171,8 @@ function M.show_current_line_blame()
   local line = vim.api.nvim_win_get_cursor(0)[1]
 
   local blame, blame_err = git({ '-C', git_root[1], -- have to explicitly specify root here for cases where git_root != cwd
-    'blame', '--line-porcelain', '-L', string.format('%d', line),
-    relative })
-  if not blame or blame_err then
+    'blame', '--line-porcelain', '-L', ('%d,%d'):format(line, line), relative })
+  if not blame then
     vim.notify('Failed to run git blame: ' .. (blame_err or 'unknown'), vim.log.levels.ERROR)
     return
   end
