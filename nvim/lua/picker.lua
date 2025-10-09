@@ -16,6 +16,22 @@ local function file_source_command()
   return [[find . -type f ! -path "*/.git/*"]]
 end
 
+local function preview_command()
+  if has_executable('bat') then
+    return [[bat --style=numbers --color=always --line-range :500 -- {}]]
+  end
+
+  if has_executable('head') then
+    return [[sh -c 'head -n 200 "$1"' sh {}]]
+  end
+
+  if has_executable('cat') then
+    return [[sh -c 'cat "$1"' sh {}]]
+  end
+
+  return nil
+end
+
 local function open_picker_window()
   local columns = vim.o.columns
   local lines = vim.o.lines
@@ -72,10 +88,27 @@ function M.files()
     vim.fn.shellescape(tmpfile)
   )
 
+  local preview = preview_command()
+
+  local fzf_args = {
+    '--prompt="Files> "',
+    '--height=100%',
+    '--layout=reverse',
+    '--info=inline',
+    '--bind ' .. vim.fn.shellescape(bind),
+    '--exit-0',
+    '--select-1',
+  }
+
+  if preview ~= nil then
+    table.insert(fzf_args, '--preview ' .. vim.fn.shellescape(preview))
+    table.insert(fzf_args, '--preview-window=right:60%:wrap')
+  end
+
   local fzf_command = string.format(
-    [[set -o pipefail; %s | fzf --prompt="Files> " --height=100%% --layout=reverse --info=inline --bind %s --exit-0 --select-1]],
+    [[set -o pipefail; %s | fzf %s]],
     source_cmd,
-    vim.fn.shellescape(bind)
+    table.concat(fzf_args, ' ')
   )
 
   local parent_win = vim.api.nvim_get_current_win()
