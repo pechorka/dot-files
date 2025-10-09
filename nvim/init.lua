@@ -132,12 +132,20 @@ local function setup_ts()
   })
 end
 
+local function setup_minipick()
+  require('mini.pick').setup()
+  vim.keymap.set('n', '<leader>fg', ':Pick grep_live<CR>')
+  vim.keymap.set('n', '<leader>fh', ':Pick help<CR>')
+end
+
 vim.pack.add({
   { src = 'https://github.com/neovim/nvim-lspconfig' },
   { src = "https://github.com/Saghen/blink.cmp" },
+  { src = 'https://github.com/nvim-mini/mini.pick' },
   { src = "https://github.com/m4xshen/hardtime.nvim" },
   { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = 'master' },
 })
+setup_minipick()
 setup_blink()
 setup_ts()
 setup_lsp()
