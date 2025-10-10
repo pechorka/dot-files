@@ -102,7 +102,7 @@ function M.files()
 
   if preview ~= nil then
     table.insert(fzf_args, '--preview ' .. vim.fn.shellescape(preview))
-    table.insert(fzf_args, '--preview-window=right:60%:wrap:hidden')
+    table.insert(fzf_args, '--preview-window=right:99%:wrap:hidden')
   end
 
   local fzf_command = string.format(
