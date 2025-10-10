@@ -34,25 +34,18 @@ end
 
 local function open_picker_window()
   local columns = vim.o.columns
-  local lines = vim.o.lines
+  local lines = vim.o.lines - vim.o.cmdheight
 
-  local width = math.max(math.floor(columns * 0.8), 40)
-  local height = math.max(math.floor(lines * 0.85), 10)
-  local row = math.floor((lines - height) / 2)
-  local col = math.floor((columns - width) / 2)
-
-  if row < 0 then
-    row = 0
-  end
-  if col < 0 then
-    col = 0
-  end
+  local width = math.max(columns, 1)
+  local height = math.max(lines, 1)
+  local row = 0
+  local col = 0
 
   local buf = vim.api.nvim_create_buf(false, true)
   local win = vim.api.nvim_open_win(buf, true, {
     relative = 'editor',
     style = 'minimal',
-    border = 'rounded',
+    border = 'none',
     row = row,
     col = col,
     width = width,
