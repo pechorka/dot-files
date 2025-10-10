@@ -76,12 +76,19 @@ function M.files()
   local tmpfile = vim.fn.tempname()
   pcall(vim.fn.delete, tmpfile)
 
-  local bind = string.format(
-    [[enter:execute-silent(printf '%%s\n' {} > %s)+accept]],
-    vim.fn.shellescape(tmpfile)
-  )
-
   local preview = preview_command()
+  local bind_actions = {
+    string.format(
+      [[enter:execute-silent(printf '%%s\n' {} > %s)+accept]],
+      vim.fn.shellescape(tmpfile)
+    ),
+  }
+
+  if preview ~= nil then
+    table.insert(bind_actions, 'alt-d:toggle-preview')
+  end
+
+  local bind = table.concat(bind_actions, ',')
 
   local fzf_args = {
     '--prompt="Files> "',
@@ -95,7 +102,7 @@ function M.files()
 
   if preview ~= nil then
     table.insert(fzf_args, '--preview ' .. vim.fn.shellescape(preview))
-    table.insert(fzf_args, '--preview-window=right:60%:wrap')
+    table.insert(fzf_args, '--preview-window=right:60%:wrap:hidden')
   end
 
   local fzf_command = string.format(
