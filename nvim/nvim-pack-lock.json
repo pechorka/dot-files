@@ -1,0 +1,25 @@
+{
+  "plugins": {
+    "blink.cmp": {
+      "rev": "40380e7",
+      "src": "https://github.com/Saghen/blink.cmp"
+    },
+    "hardtime.nvim": {
+      "rev": "b4e4319",
+      "src": "https://github.com/m4xshen/hardtime.nvim"
+    },
+    "mini.pick": {
+      "rev": "08a7220",
+      "src": "https://github.com/nvim-mini/mini.pick"
+    },
+    "nvim-lspconfig": {
+      "rev": "2010fc6",
+      "src": "https://github.com/neovim/nvim-lspconfig"
+    },
+    "nvim-treesitter": {
+      "rev": "42fc28ba",
+      "src": "https://github.com/nvim-treesitter/nvim-treesitter",
+      "version": "'master'"
+    }
+  }
+}
