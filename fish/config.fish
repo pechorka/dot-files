@@ -22,3 +22,5 @@ set NPM_PACKAGES "$HOME/.npm-packages"
 set PATH $PATH $NPM_PACKAGES/bin
 
 set -x RIPGREP_CONFIG_PATH "$HOME/.config/.ripgreprc"
+
+__ensure_ssh_agent
