@@ -20,6 +20,10 @@
       "rev": "42fc28ba",
       "src": "https://github.com/nvim-treesitter/nvim-treesitter",
       "version": "'master'"
+    },
+    "render-markdown.nvim": {
+      "rev": "6a744f0",
+      "src": "https://github.com/MeanderingProgrammer/render-markdown.nvim"
     }
   }
 }
