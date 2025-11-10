@@ -49,12 +49,11 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 vim.g.mapleader = " "
-local git_utils = require('git_utils')
-local picker = require('picker')
 
 vim.keymap.set("n", "-", vim.cmd.Ex)
 vim.keymap.set('n', 'F', vim.lsp.buf.format)
 
+local git_utils = require('git_utils')
 vim.keymap.set('n', '<leader>cr', git_utils.copy_remote_url, { desc = 'Copy remote repository link' })
 vim.keymap.set('n', '<leader>gb', git_utils.show_current_line_blame, { desc = 'Show git blame for current line' })
 
@@ -66,7 +65,8 @@ vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "remove search high
 vim.keymap.set("n", "<C-k>", "<cmd>cnext<CR>zz")
 vim.keymap.set("n", "<C-j>", "<cmd>cprev<CR>zz")
 
-vim.keymap.set('n', '<leader>ff', picker.files, { desc = 'Find file' })
+--local picker = require('picker')
+--vim.keymap.set('n', '<leader>ff', picker.files, { desc = 'Find file' })
 
 -- insert if err != nil {return err}
 vim.keymap.set("n", "<leader>ee", "oif err != nil {<CR>}<Esc>Oreturn err<Esc>bi")
@@ -102,11 +102,14 @@ end
 local function setup_lsp()
   local lsps = {
     "lua_ls",
-    "gopls",         -- go install golang.org/x/tools/gopls@latest
-    "rust_analyzer", -- rustup component add rust-src
-    "pyright",       -- npm i -g pyright
+    "gopls",          -- go install golang.org/x/tools/gopls@latest
+    "rust_analyzer",  -- rustup component add rust-src
+    "pyright",        -- npm i -g pyright
     "ts_ls",         -- npm i -g typescript typescript-language-server
-    "jsonls",        -- npm i -g vscode-langservers-extracted
+    "jsonls", "html", -- npm i -g vscode-langservers-extracted
+    -- "htmx",           -- cargo install htmx-lsp
+    --"tsgo",           -- npm install @typescript/native-preview
+    "ols",            -- https://github.com/DanielGavin/ols?tab=readme-ov-file#installation
   }
   vim.lsp.enable(lsps)
   vim.api.nvim_create_autocmd("LspAttach", {
@@ -133,7 +136,9 @@ local function setup_ts()
 end
 
 local function setup_minipick()
-  require('mini.pick').setup()
+  local pick = require('mini.pick')
+  pick.setup()
+  vim.keymap.set('n', '<leader>ff', ':Pick files<CR>')
   vim.keymap.set('n', '<leader>fg', ':Pick grep_live<CR>')
   vim.keymap.set('n', '<leader>fh', ':Pick help<CR>')
 end
@@ -142,9 +147,10 @@ vim.pack.add({
   { src = 'https://github.com/neovim/nvim-lspconfig' },
   { src = "https://github.com/Saghen/blink.cmp" },
   { src = 'https://github.com/nvim-mini/mini.pick' },
-  { src = "https://github.com/m4xshen/hardtime.nvim" },
   { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = 'master' },
+  { src = 'https://github.com/MeanderingProgrammer/render-markdown.nvim' },
 })
+require('render-markdown').setup({})
 setup_minipick()
 setup_blink()
 setup_ts()
