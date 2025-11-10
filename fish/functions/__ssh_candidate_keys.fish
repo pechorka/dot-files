@@ -1,17 +1,25 @@
 function __ssh_candidate_keys --description 'List private SSH key files under ~/.ssh'
-    set -l keys
     for f in ~/.ssh/*
-        if test -f $f
-            # Skip obvious non-keys
-            if string match -q -- "*.pub" $f; or string match -q -- "*known_hosts*" $f; or string match -q -- "*authorized_keys*" $f; or string match -q -- "*config*" $f
+        if not test -f $f
+            continue
+        end
+
+        # Skip obvious non-keys
+        switch (basename -- $f)
+            case '*.pub' 'known_hosts*' 'authorized_keys*' 'config*'
                 continue
-            end
-            # Heuristic: check PEM header for private keys
-            set -l first (head -n 1 $f ^/dev/null)
-            if string match -rq '^-----BEGIN .*PRIVATE KEY-----' -- $first
-                set -a keys $f
-            end
+        end
+
+        # Read first line safely; suppress errors if unreadable
+        set -l first
+        if not read -l first < $f 2>/dev/null
+            continue
+        end
+
+        # Heuristic: catches OPENSSH/PKCS#1/PKCS#8/encrypted formats
+        if string match -rq '^\s*-----BEGIN .*PRIVATE KEY-----' -- $first
+            echo $f
         end
     end
-    printf "%s\n" $keys
 end
+
