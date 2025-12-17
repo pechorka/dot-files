@@ -57,6 +57,9 @@ local git_utils = require('git_utils')
 vim.keymap.set('n', '<leader>cr', git_utils.copy_remote_url, { desc = 'Copy remote repository link' })
 vim.keymap.set('n', '<leader>gb', git_utils.show_current_line_blame, { desc = 'Show git blame for current line' })
 
+local llm = require('llm')
+vim.keymap.set({ "n", "v" }, "<leader>lp", llm.apply_llm_patch)
+
 vim.keymap.set("x", "<leader>p", [["_dP]])       -- replace without yanking replaced text
 vim.keymap.set({ "n", "v" }, "<leader>d", '"_d') -- delete without yanking
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "remove search highlighting" })
