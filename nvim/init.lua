@@ -148,9 +148,7 @@ vim.pack.add({
   { src = "https://github.com/Saghen/blink.cmp" },
   { src = 'https://github.com/nvim-mini/mini.pick' },
   { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = 'master' },
-  { src = 'https://github.com/MeanderingProgrammer/render-markdown.nvim' },
 })
-require('render-markdown').setup({})
 setup_minipick()
 setup_blink()
 setup_ts()
