@@ -105,11 +105,12 @@ local function setup_lsp()
     "gopls",          -- go install golang.org/x/tools/gopls@latest
     "rust_analyzer",  -- rustup component add rust-src
     "pyright",        -- npm i -g pyright
-    "ts_ls",         -- npm i -g typescript typescript-language-server
+    "ts_ls",          -- npm i -g typescript typescript-language-server
     "jsonls", "html", -- npm i -g vscode-langservers-extracted
     -- "htmx",           -- cargo install htmx-lsp
     --"tsgo",           -- npm install @typescript/native-preview
-    "ols",            -- https://github.com/DanielGavin/ols?tab=readme-ov-file#installation
+    "ols", -- https://github.com/DanielGavin/ols?tab=readme-ov-file#installation
+    "zls",
   }
   vim.lsp.enable(lsps)
   vim.api.nvim_create_autocmd("LspAttach", {
