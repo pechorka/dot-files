@@ -1,5 +1,4 @@
 function cpdiff
-    # Optional: allow specifying base branch, default to "main"
     set base main
     if test (count $argv) -ge 1
         set base $argv[1]
@@ -15,20 +14,19 @@ function cpdiff
         return 1
     end
 
-    # Resolve base branch: prefer local branch, fall back to origin/<base>
+    # Resolve base ref: try as-is, then fall back to origin/<base> for branch names
     set base_ref $base
-    if not git show-ref --verify --quiet "refs/heads/$base"
-        if git show-ref --verify --quiet "refs/remotes/origin/$base"
+    if not git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1
+        if git rev-parse --verify --quiet "origin/$base^{commit}" >/dev/null 2>&1
             set base_ref "origin/$base"
         else
-            echo "Error: base branch '$base' or 'origin/$base' not found" >&2
+            echo "Error: '$base' is not a valid git ref" >&2
             return 1
         end
     end
 
     set tmpfile (mktemp)
 
-    # Wrap diff in a code block for easy LLM pasting
     echo '```diff' > $tmpfile
     git diff $base_ref...HEAD >> $tmpfile
     echo >> $tmpfile
@@ -45,6 +43,5 @@ function cpdiff
     else
         echo "Warning: neither xclip nor xsel found. Diff saved to $tmpfile" >&2
         echo "Install one with: sudo apt install xclip" >&2
-        # leave tmpfile so you can inspect/copy manually
     end
 end
