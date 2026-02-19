@@ -60,6 +60,9 @@ vim.keymap.set('n', '<leader>gb', git_utils.show_current_line_blame, { desc = 'S
 local llm = require('llm')
 vim.keymap.set({ "n", "v" }, "<leader>lp", llm.apply_llm_patch)
 
+require('rg_quickfix')
+vim.keymap.set('v', '<leader>rg', '"zy:Rgs <C-r>z<CR>', { desc = 'Search selection with Rgs' })
+
 vim.keymap.set("x", "<leader>p", [["_dP]])       -- replace without yanking replaced text
 vim.keymap.set({ "n", "v" }, "<leader>d", '"_d') -- delete without yanking
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "remove search highlighting" })
@@ -114,6 +117,7 @@ local function setup_lsp()
     --"tsgo",           -- npm install @typescript/native-preview
     "ols", -- https://github.com/DanielGavin/ols?tab=readme-ov-file#installation
     "zls",
+    "kotlin_lsp",
   }
   vim.lsp.enable(lsps)
   vim.api.nvim_create_autocmd("LspAttach", {
@@ -122,6 +126,18 @@ local function setup_lsp()
       vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, bufopts)
     end,
   })
+  --vim.api.nvim_create_autocmd("LspProgress", {
+  --  callback = function(ev)
+  --    local client = vim.lsp.get_client_by_id(ev.data.client_id)
+  --    local value = ev.data.params.value
+  --    if client and value and value.kind then
+  --      local msg = value.message or ""
+  --      local title = value.title or ""
+  --      local pct = value.percentage and string.format(" (%d%%)", value.percentage) or ""
+  --      vim.notify(string.format("[%s] %s %s%s", client.name, title, msg, pct), vim.log.levels.INFO)
+  --    end
+  --  end,
+  --})
 end
 
 local function setup_ts()
@@ -157,3 +173,7 @@ setup_minipick()
 setup_blink()
 setup_ts()
 setup_lsp()
+vim.cmd("colorscheme habamax")
+
+vim.diagnostic.enable(false)
+
