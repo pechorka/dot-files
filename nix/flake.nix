@@ -1,7 +1,12 @@
 {
+  description = "pechorka dot-files";
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+
+    # Home Manager (standalone, not NixOS module)
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
     # Neovim nightly from master
     neovim-nightly-overlay = {
@@ -10,62 +15,61 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, neovim-nightly-overlay, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-        # nightly nvim package from the overlay (built from Neovim master)
-        nvimNightly = neovim-nightly-overlay.packages.${system}.default;
+  outputs = inputs@{ self, nixpkgs, home-manager, neovim-nightly-overlay, ... }:
+    let
+      system = builtins.currentSystem;
 
-        # One meta-package with everything you listed
-        env = pkgs.buildEnv {
-          name = "my-env";
-          paths = [
-            # shells & editors
-            pkgs.fish nvimNightly pkgs.tmux
-	    pkgs.lazygit
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
 
-            # CLI utils
-            pkgs.ripgrep pkgs.fzf pkgs.fd pkgs.jq pkgs.yq-go pkgs.htop pkgs.bat
+      nvimNightly = neovim-nightly-overlay.packages.${system}.default;
 
-            # DB & clients
-            pkgs.sqlite pkgs.pgcli
+      hm = home-manager.packages.${system}.home-manager;
 
-            # Containers
-            pkgs.podman
+      # `nix run .#sync`:
+      #   - git pull the repo in ~/.config
+      #   - home-manager switch (impure so it can read $USER/$HOME for username/homeDir)
+      sync = pkgs.writeShellApplication {
+        name = "sync";
+        runtimeInputs = [ pkgs.git ];
+        text = ''
+          set -euo pipefail
 
-            # WebAssembly runtime
-            pkgs.wasmtime
+          DOTFILES="${XDG_CONFIG_HOME:-$HOME/.config}"
 
-            # Go toolchain + LSP
-            pkgs.go_1_25 pkgs.gopls
+          if [ -d "$DOTFILES/.git" ]; then
+            echo "==> Updating dotfiles repo (git pull --ff-only)..."
+            git -C "$DOTFILES" pull --ff-only
+          else
+            echo "WARNING: $DOTFILES is not a git repo; skipping git pull."
+          fi
 
-            # Rust toolchain & tools (from nixpkgs)
-            pkgs.rustc pkgs.cargo pkgs.rustfmt pkgs.clippy pkgs.rust-analyzer
-
-            # JS/TS
-            pkgs.nodejs_24 pkgs.pnpm
-
-            # JVM & build
-            pkgs.jdk25 pkgs.kotlin pkgs.gradle
-          ];
+          echo "==> Applying Home Manager config..."
+          exec "${hm}/bin/home-manager" switch --impure --flake "$DOTFILES#default"
+        '';
+      };
+    in
+    {
+      # Home Manager configuration:
+      # - reads $USER/$HOME inside home.nix (so sync calls home-manager with --impure)
+      homeConfigurations.default = home-manager.lib.homeManagerConfiguration {
+        inherit pkgs;
+        modules = [
+          ./home.nix
+        ];
+        extraSpecialArgs = {
+          inherit nvimNightly;
         };
-        # Helper so `nix run .#sync` installs/upgrades the env
-	sync = pkgs.writeShellApplication {
-	  name = "sync";
-	  runtimeInputs = [ pkgs.nix ];
-	  text = ''
-	    set -euo pipefail
-	    nix --extra-experimental-features 'nix-command flakes' \
-	      profile install "path:${self}#env"
-	    echo
-	    echo "Synced ${self}#env into this user's profile."
-	    nix profile list
-	  '';
-	};
-      in {
-        packages.env = env;
-        apps.sync = { type = "app"; program = "${sync}/bin/sync"; };
-      });
-}
+      };
 
+      apps.${system}.sync = {
+        type = "app";
+        program = "${sync}/bin/sync";
+      };
+
+      # Allow: `nix run .` as shorthand
+      apps.${system}.default = self.apps.${system}.sync;
+    };
+}
