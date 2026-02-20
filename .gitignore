@@ -6,6 +6,7 @@
 
 !fish
 !fish/**
+fish/fish_variables
 
 !.ripgreprc
 
