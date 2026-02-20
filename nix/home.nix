@@ -66,6 +66,7 @@ in
 
     # CLI utils
     ripgrep fzf fd jq yq-go htop bat
+    keychain
 
     # DB & clients
     sqlite pgcli
