@@ -42,6 +42,7 @@ in
 
   targets.genericLinux.enable = true;
   programs.home-manager.enable = true;
+  fonts.fontconfig.enable = true;
 
   # Useful env vars (Wayland + sane defaults)
   home.sessionVariables = {
@@ -118,6 +119,10 @@ in
     hicolor-icon-theme
     gsettings-desktop-schemas
     font-awesome
+    noto-fonts
+    noto-fonts-color-emoji
+    liberation_ttf
+    fontconfig
 
     # Polkit agent (auth dialogs)
     polkit_gnome
