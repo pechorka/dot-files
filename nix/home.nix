@@ -217,7 +217,9 @@ in
 
     style = ''
       * {
-        font-family: FontAwesome, sans-serif;
+        font-family: "Noto Sans", "Liberation Sans", "Noto Color Emoji",
+                     "Font Awesome 6 Free", "Font Awesome 6 Brands",
+                     sans-serif;
         font-size: 12pt;
       }
 
