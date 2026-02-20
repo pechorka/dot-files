@@ -41,7 +41,7 @@ apt-get install -y --no-install-recommends \
   dbus-user-session \
   network-manager \
   bluez \
-  policykit-1 \
+  polkitd pkexec \
   pipewire pipewire-pulse wireplumber
 
 echo "==> Enabling system services..."

@@ -13,14 +13,17 @@
       url = "github:nix-community/neovim-nightly-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nixgl.url = "github:nix-community/nixGL";
   };
 
-  outputs = inputs@{ self, nixpkgs, home-manager, neovim-nightly-overlay, ... }:
+  outputs = inputs@{ self, nixpkgs, home-manager, neovim-nightly-overlay, nixgl, ... }:
     let
-      system = builtins.currentSystem;
+      system = "x86_64-linux";
 
       pkgs = import nixpkgs {
         inherit system;
+	overlays = [ nixgl.overlay ];
         config.allowUnfree = true;
       };
 
@@ -31,13 +34,13 @@
       # `nix run .#sync`:
       #   - git pull the repo in ~/.config
       #   - home-manager switch (impure so it can read $USER/$HOME for username/homeDir)
-      sync = pkgs.writeShellApplication {
+      syncDrv = pkgs.writeShellApplication {
         name = "sync";
         runtimeInputs = [ pkgs.git ];
         text = ''
           set -euo pipefail
 
-          DOTFILES="${XDG_CONFIG_HOME:-$HOME/.config}"
+          DOTFILES="''${XDG_CONFIG_HOME:-$HOME/.config}"
 
           if [ -d "$DOTFILES/.git" ]; then
             echo "==> Updating dotfiles repo (git pull --ff-only)..."
@@ -47,7 +50,7 @@
           fi
 
           echo "==> Applying Home Manager config..."
-          exec "${hm}/bin/home-manager" switch --impure --flake "$DOTFILES#default"
+          exec "${hm}/bin/home-manager" switch --impure --flake "$DOTFILES/nix#default"
         '';
       };
     in
@@ -63,13 +66,15 @@
           inherit nvimNightly;
         };
       };
-
-      apps.${system}.sync = {
-        type = "app";
-        program = "${sync}/bin/sync";
-      };
-
+      apps = {
+        ${system} = rec {
+          sync = {
+            type = "app";
+            program = "${syncDrv}/bin/sync";
+          };
       # Allow: `nix run .` as shorthand
-      apps.${system}.default = self.apps.${system}.sync;
+	  default = "sync";
+        };
+      };
     };
 }

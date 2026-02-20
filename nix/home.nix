@@ -5,6 +5,10 @@ let
   # NOTE: home-manager is run with --impure by the sync script.
   username = builtins.getEnv "USER";
   homeDir  = builtins.getEnv "HOME";
+  nixGLIntel = pkgs.nixgl.nixGLIntel;
+  swayNixGL = pkgs.writeShellScriptBin "sway" ''
+    exec ${nixGLIntel}/bin/nixGLIntel ${pkgs.sway}/bin/sway "$@"
+  '';
 
   screenshotArea = pkgs.writeShellApplication {
     name = "screenshot-area";
@@ -16,7 +20,7 @@ let
     ];
     text = ''
       set -euo pipefail
-      dir="${HOME}/Pictures/Screenshots"
+      dir="$HOME/Pictures/Screenshots"
       mkdir -p "$dir"
       file="$dir/$(date +%Y-%m-%d_%H-%M-%S).png"
 
@@ -44,9 +48,6 @@ in
     EDITOR = "nvim";
     VISUAL = "nvim";
     TERMINAL = "ghostty";
-
-    # Helps GTK apps installed via Nix find icons/schemas on Debian-ish systems.
-    XDG_DATA_DIRS = "${config.home.profileDirectory}/share:/usr/local/share:/usr/share";
 
     # Electron/Chromium apps on Wayland (harmless if unused).
     NIXOS_OZONE_WL = "1";
@@ -85,7 +86,6 @@ in
     jdk kotlin gradle
 
     # --- No-DE Wayland desktop bits ---
-    sway
     waybar
     wofi
     ghostty
@@ -232,6 +232,7 @@ in
 
   wayland.windowManager.sway = {
     enable = true;
+    package = swayNixGL;
 
     # This improves the Wayland “session” experience under systemd (services start at the right time, env imported, etc.). :contentReference[oaicite:6]{index=6}
     systemd.enable = true;
@@ -269,6 +270,7 @@ in
         # nm-applet needs a tray implementation. :contentReference[oaicite:8]{index=8}
         { command = "${pkgs.networkmanagerapplet}/bin/nm-applet --indicator"; }
         { command = "${pkgs.blueman}/bin/blueman-applet"; }
+        { command = "${pkgs.waybar}/bin/waybar"; }
       ];
 
       keybindings = lib.mkOptionDefault {
@@ -302,7 +304,7 @@ in
       if test -z "$WAYLAND_DISPLAY" -a -z "$DISPLAY"
         if not set -q SSH_CONNECTION
           if test (tty) = "/dev/tty1"
-            exec ${pkgs.sway}/bin/sway
+            exec ${swayNixGL}/bin/sway
           end
         end
       end
