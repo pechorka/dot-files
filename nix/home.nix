@@ -55,6 +55,9 @@ in
 
   # Packages you asked for (plus the sway stack + tray helpers)
   home.packages = with pkgs; [
+    # browsers
+    firefox
+    chromium
     # shells & editors
     fish
     nvimNightly
