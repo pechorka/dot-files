@@ -42,6 +42,9 @@ stage_1_system_packages() {
         sudo pacman -S --needed --noconfirm --ask 4 iptables-nft
     fi
 
+    # Install noto-fonts first to satisfy ttf-font dependency without interactive prompt
+    sudo pacman -S --needed --noconfirm noto-fonts
+
     local packages=(
         # Display & compositor
         sway
@@ -135,10 +138,10 @@ stage_3_nix_tooling() {
 }
 
 # =============================================================================
-# Stage 4 — System Configs & Build vm CLI
+# Stage 4 — System Configs & Shell
 # =============================================================================
-stage_4_system_and_vm() {
-    log "Stage 4 — Installing system configs and building vm CLI..."
+stage_4_system() {
+    log "Stage 4 — Installing system configs..."
 
     mkdir -p "$LOCAL_BIN"
 
@@ -152,15 +155,6 @@ stage_4_system_and_vm() {
     if [ -f "$DOTFILES_DIR/system/zram-generator.conf" ]; then
         sudo ln -sfn "$DOTFILES_DIR/system/zram-generator.conf" /etc/systemd/zram-generator.conf
         log "  Linked zram-generator config"
-    fi
-
-    # --- Build vm CLI ---
-    if command -v go &>/dev/null && [ -d "$DOTFILES_DIR/vm" ]; then
-        log "Building vm CLI..."
-        (cd "$DOTFILES_DIR/vm" && go build -o "$LOCAL_BIN/vm")
-        log "  Built vm → $LOCAL_BIN/vm"
-    else
-        warn "Go not available or vm/ source not found — skipping vm CLI build."
     fi
 
     # --- Set fish as default shell ---
@@ -268,10 +262,10 @@ main() {
     stage_1_system_packages
     stage_2_nix
     stage_3_nix_tooling
-    stage_4_system_and_vm
-    stage_5_incus
+    stage_4_system
+    # stage_5_incus       # TODO: enable after vm CLI is implemented
     stage_6_services
-    stage_7_images
+    # stage_7_images      # TODO: enable after vm CLI is implemented
 
     log "========================================="
     log "Bootstrap complete!"
@@ -280,8 +274,6 @@ main() {
     log "Next steps:"
     log "  1. Log out and back in (group membership + fish shell)"
     log "  2. Start Sway from TTY: sway"
-    log "  3. Build golden images: vm image build personal v1.0.0"
-    log "  4. First project: vm start myproject --repo <url>"
 }
 
 main "$@"
