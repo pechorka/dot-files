@@ -4,10 +4,9 @@ set -euo pipefail
 # =============================================================================
 # Bootstrap Script
 # Turns a fresh Arch install into a fully configured development workstation.
-# See docs/requirements.md and docs/arch-installation-guide.md
 #
 # Prerequisites (from Arch install):
-#   - Arch base system booting (btrfs, snapper configured)
+#   - Arch base system booting (btrfs with subvolumes)
 #   - Alpine recovery partition installed
 #   - User account with sudo access
 #   - Internet connectivity
@@ -18,7 +17,6 @@ set -euo pipefail
 # =============================================================================
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FLAKE_REPO="$DOTFILES_DIR/nix"  # Shared Nix flake (lives in dotfiles)
 LOCAL_BIN="$HOME/.local/bin"
 
 RED='\033[0;31m'
@@ -31,18 +29,18 @@ warn() { echo -e "${YELLOW}[bootstrap]${NC} $1"; }
 error() { echo -e "${RED}[bootstrap]${NC} $1"; }
 
 # =============================================================================
-# Stage 1 — System Packages (pacman)
+# Stage 1 — System Packages (pacman + AUR)
 # =============================================================================
-stage_1_system_packages() {
-    log "Stage 1 — Installing system packages via pacman..."
+stage_1_packages() {
+    log "Stage 1 — Installing packages via pacman..."
 
-    # Replace iptables with iptables-nft (required by incus, conflicts with base iptables)
+    # Resolve iptables conflict (needed by some packages)
     if pacman -Qi iptables &>/dev/null && ! pacman -Qi iptables-nft &>/dev/null; then
-        log "Replacing iptables with iptables-nft (required by incus)..."
+        log "Replacing iptables with iptables-nft..."
         sudo pacman -S --needed --noconfirm --ask 4 iptables-nft
     fi
 
-    # Install noto-fonts first to satisfy ttf-font dependency without interactive prompt
+    # Pre-install noto-fonts to satisfy ttf-font dependency without prompt
     sudo pacman -S --needed --noconfirm noto-fonts
 
     local packages=(
@@ -52,24 +50,95 @@ stage_1_system_packages() {
         swayidle
         swaybg
         xdg-desktop-portal-wlr
+        xwayland
 
         # Audio
         pipewire
         pipewire-pulse
         wireplumber
 
-        # Graphics (Intel i7-1365U — Iris Xe integrated)
+        # Graphics (Intel i7-1365U)
         mesa
         vulkan-intel
         intel-media-driver
 
-        # VM infrastructure
-        incus
+        # Browsers (GPU-dependent, must be pacman not Nix)
+        firefox
+        chromium
 
         # Swap (compressed, in RAM)
         zram-generator
 
-        # Build tools (needed for AUR helper)
+        # Snapshot management
+        snapper
+        snap-pac
+
+        # Shells & editors
+        fish
+        neovim
+        tmux
+
+        # CLI tools
+        ripgrep
+        fzf
+        fd
+        jq
+        htop
+        bat
+        curl
+        wget
+        lazygit
+        openssh
+
+        # Development — Go
+        go
+        gopls
+
+        # Development — Rust
+        rustup
+
+        # Development — JS/TS
+        nodejs
+        pnpm
+
+        # Development — JVM
+        jdk-openjdk
+        kotlin
+        gradle
+
+        # DB clients
+        sqlite
+        pgcli
+
+        # Containers
+        podman
+
+        # Wayland desktop tools
+        waybar
+        wofi
+        mako
+        grim
+        slurp
+        wl-clipboard
+        brightnessctl
+        playerctl
+        pamixer
+
+        # System applets
+        networkmanager
+        blueman
+        pavucontrol
+        polkit-gnome
+
+        # Fonts
+        noto-fonts-emoji
+        ttf-font-awesome
+        ttf-liberation
+
+        # Sandboxing (for future per-project isolation)
+        bubblewrap
+
+        # Build tools
         base-devel
     )
 
@@ -87,77 +156,71 @@ stage_1_system_packages() {
         log "yay already installed, skipping."
     fi
 
+    # AUR packages
+    local aur_packages=(ghostty yq-go)
+    for pkg in "${aur_packages[@]}"; do
+        if ! pacman -Qi "$pkg" &>/dev/null; then
+            log "Installing $pkg from AUR..."
+            yay -S --needed --noconfirm "$pkg"
+        fi
+    done
+
+    # Initialize Rust toolchain via rustup (pacman installs rustup, not rustc directly)
+    if ! rustup show active-toolchain &>/dev/null 2>&1; then
+        log "Installing Rust stable toolchain..."
+        rustup default stable
+        rustup component add rust-analyzer clippy rustfmt
+    fi
+
+    # Configure snapper for btrfs root snapshots
+    if [ ! -f /etc/snapper/configs/root ]; then
+        log "Configuring snapper..."
+        sudo snapper -c root create-config /
+
+        if sudo btrfs subvolume show /.snapshots &>/dev/null 2>&1; then
+            sudo btrfs subvolume delete /.snapshots
+        fi
+        sudo mkdir -p /.snapshots
+
+        local root_dev
+        root_dev=$(findmnt -n -o SOURCE /)
+        root_dev=$(echo "$root_dev" | sed 's/\[.*\]//')
+        sudo mount -o subvol=@snapshots,compress=zstd,noatime "$root_dev" /.snapshots
+
+        sudo sed -i 's/^TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/' /etc/snapper/configs/root
+        sudo sed -i 's/^NUMBER_LIMIT=.*/NUMBER_LIMIT="5"/' /etc/snapper/configs/root
+        sudo sed -i 's/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT="5"/' /etc/snapper/configs/root
+
+        log "  Snapper configured"
+    else
+        log "Snapper already configured, skipping."
+    fi
+
     log "Stage 1 complete."
 }
 
 # =============================================================================
-# Stage 2 — Nix Installation
+# Stage 2 — System Configs
 # =============================================================================
-stage_2_nix() {
-    log "Stage 2 — Installing Nix..."
-
-    if command -v nix &>/dev/null; then
-        log "Nix already installed, skipping."
-    else
-        sh <(curl -L https://nixos.org/nix/install) --daemon --yes
-
-        # Source nix in current shell
-        # shellcheck disable=SC1091
-        if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
-            . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
-        fi
-    fi
-
-    # Enable flakes and nix-command (idempotent)
-    local nix_conf="/etc/nix/nix.conf"
-    if ! grep -q "experimental-features" "$nix_conf" 2>/dev/null; then
-        log "Enabling Nix flakes and nix-command..."
-        echo "experimental-features = nix-command flakes" | sudo tee -a "$nix_conf" >/dev/null
-        sudo systemctl restart nix-daemon.service
-    else
-        log "Nix flakes already enabled, skipping."
-    fi
-
-    log "Stage 2 complete."
-}
-
-# =============================================================================
-# Stage 3 — Userspace Tooling (Nix)
-# =============================================================================
-stage_3_nix_tooling() {
-    log "Stage 3 — Installing userspace tooling via Nix..."
-
-    nix profile install "$FLAKE_REPO#host" || {
-        warn "Nix profile install failed — the flake repo may not exist yet."
-        warn "Create the flake at $FLAKE_REPO and re-run bootstrap."
-        warn "Continuing with remaining stages..."
-        return 0
-    }
-
-    log "Stage 3 complete."
-}
-
-# =============================================================================
-# Stage 4 — System Configs & Shell
-# =============================================================================
-stage_4_system() {
-    log "Stage 4 — Installing system configs..."
+stage_2_system() {
+    log "Stage 2 — Installing system configs..."
 
     mkdir -p "$LOCAL_BIN"
-
-    # --- System configs (sudo needed, can't live in ~/.config) ---
-    if [ -f "$DOTFILES_DIR/system/resolved-incus-dns.conf" ]; then
-        sudo mkdir -p /etc/systemd/resolved.conf.d
-        sudo ln -sfn "$DOTFILES_DIR/system/resolved-incus-dns.conf" /etc/systemd/resolved.conf.d/incus-dns.conf
-        log "  Linked resolved incus-dns config"
-    fi
 
     if [ -f "$DOTFILES_DIR/system/zram-generator.conf" ]; then
         sudo ln -sfn "$DOTFILES_DIR/system/zram-generator.conf" /etc/systemd/zram-generator.conf
         log "  Linked zram-generator config"
     fi
 
-    # --- Set fish as default shell ---
+    log "Stage 2 complete."
+}
+
+# =============================================================================
+# Stage 3 — Shell Setup
+# =============================================================================
+stage_3_shell() {
+    log "Stage 3 — Setting up fish shell..."
+
     local fish_path
     fish_path="$(command -v fish 2>/dev/null || echo "")"
     if [ -n "$fish_path" ]; then
@@ -173,45 +236,16 @@ stage_4_system() {
         warn "fish not found — skipping shell change."
     fi
 
-    log "Stage 4 complete."
+    log "Stage 3 complete."
 }
 
 # =============================================================================
-# Stage 5 — Incus Initialization
+# Stage 4 — systemd Services
 # =============================================================================
-stage_5_incus() {
-    log "Stage 5 — Initializing Incus..."
-
-    if ! groups | grep -q incus-admin; then
-        sudo usermod -aG incus-admin "$USER"
-        warn "Added $USER to incus-admin group. Takes effect on next login."
-    fi
-
-    local preseed="$DOTFILES_DIR/system/incus-preseed.yaml"
-    if [ -f "$preseed" ]; then
-        if sudo incus profile show default 2>/dev/null | grep -q "eth0"; then
-            log "Incus already initialized, skipping."
-        else
-            sudo systemctl enable --now incus
-            sleep 2
-            cat "$preseed" | sudo incus admin init --preseed
-            log "  Incus initialized from preseed"
-        fi
-    else
-        warn "Incus preseed not found — skipping."
-    fi
-
-    log "Stage 5 complete."
-}
-
-# =============================================================================
-# Stage 6 — systemd Services
-# =============================================================================
-stage_6_services() {
-    log "Stage 6 — Enabling systemd services..."
+stage_4_services() {
+    log "Stage 4 — Enabling systemd services..."
 
     local services=(
-        incus
         systemd-resolved
         NetworkManager
         snapper-cleanup.timer
@@ -226,7 +260,6 @@ stage_6_services() {
         fi
     done
 
-    # Pipewire runs as user service
     local user_services=(pipewire pipewire-pulse wireplumber)
     for svc in "${user_services[@]}"; do
         if systemctl --user is-enabled "$svc" &>/dev/null; then
@@ -236,18 +269,7 @@ stage_6_services() {
         fi
     done
 
-    sudo systemctl restart systemd-resolved
-
-    log "Stage 6 complete."
-}
-
-# =============================================================================
-# Stage 7 — Golden Image Build (optional)
-# =============================================================================
-stage_7_images() {
-    log "Stage 7 — Golden image build (skipped — run manually when ready)"
-    log "  vm image build personal v1.0.0"
-    log "  vm image build work v1.0.0"
+    log "Stage 4 complete."
 }
 
 # =============================================================================
@@ -259,20 +281,17 @@ main() {
     log "Dotfiles: $DOTFILES_DIR"
     log "========================================="
 
-    stage_1_system_packages
-    stage_2_nix
-    stage_3_nix_tooling
-    stage_4_system
-    # stage_5_incus       # TODO: enable after vm CLI is implemented
-    stage_6_services
-    # stage_7_images      # TODO: enable after vm CLI is implemented
+    stage_1_packages
+    stage_2_system
+    stage_3_shell
+    stage_4_services
 
     log "========================================="
     log "Bootstrap complete!"
     log "========================================="
     log ""
     log "Next steps:"
-    log "  1. Log out and back in (group membership + fish shell)"
+    log "  1. Log out and back in (for fish shell)"
     log "  2. Start Sway from TTY: sway"
 }
 
