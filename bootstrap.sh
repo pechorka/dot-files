@@ -129,47 +129,14 @@ stage_3_nix_tooling() {
 }
 
 # =============================================================================
-# Stage 4 — Dotfile Symlinks & Build vm CLI
+# Stage 4 — System Configs & Build vm CLI
 # =============================================================================
-stage_4_dotfiles_and_vm() {
-    log "Stage 4 — Symlinking dotfiles and building vm CLI..."
+stage_4_system_and_vm() {
+    log "Stage 4 — Installing system configs and building vm CLI..."
 
     mkdir -p "$LOCAL_BIN"
-    mkdir -p "$HOME/.config/git"
 
-    # --- User config symlinks ---
-    local user_links=(
-        "$DOTFILES_DIR/fish:$HOME/.config/fish"
-        "$DOTFILES_DIR/nvim:$HOME/.config/nvim"
-        "$DOTFILES_DIR/tmux:$HOME/.config/tmux"
-        "$DOTFILES_DIR/config/git/ignore:$HOME/.config/git/ignore"
-    )
-
-    # These are added when the config files exist in the repo
-    [ -d "$DOTFILES_DIR/config/ghostty" ] && user_links+=("$DOTFILES_DIR/config/ghostty:$HOME/.config/ghostty")
-    [ -d "$DOTFILES_DIR/config/sway" ] && user_links+=("$DOTFILES_DIR/config/sway:$HOME/.config/sway")
-
-    for link in "${user_links[@]}"; do
-        local src="${link%%:*}"
-        local dst="${link##*:}"
-
-        if [ ! -e "$src" ]; then
-            warn "Source not found, skipping: $src"
-            continue
-        fi
-
-        mkdir -p "$(dirname "$dst")"
-        ln -sfn "$src" "$dst"
-        log "  Linked $dst"
-    done
-
-    # --- ripgreprc ---
-    if [ -f "$DOTFILES_DIR/.ripgreprc" ]; then
-        ln -sfn "$DOTFILES_DIR/.ripgreprc" "$HOME/.config/.ripgreprc"
-        log "  Linked .ripgreprc"
-    fi
-
-    # --- System configs (sudo) ---
+    # --- System configs (sudo needed, can't live in ~/.config) ---
     if [ -f "$DOTFILES_DIR/system/resolved-incus-dns.conf" ]; then
         sudo mkdir -p /etc/systemd/resolved.conf.d
         sudo ln -sfn "$DOTFILES_DIR/system/resolved-incus-dns.conf" /etc/systemd/resolved.conf.d/incus-dns.conf
@@ -295,7 +262,7 @@ main() {
     stage_1_system_packages
     stage_2_nix
     stage_3_nix_tooling
-    stage_4_dotfiles_and_vm
+    stage_4_system_and_vm
     stage_5_incus
     stage_6_services
     stage_7_images

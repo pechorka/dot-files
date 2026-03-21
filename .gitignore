@@ -21,8 +21,8 @@ fish/fish_variables
 !system
 !system/**
 
-!config
-!config/**
+!git
+!git/**
 
 !docs
 !docs/**
