@@ -89,6 +89,7 @@ stage_1_packages() {
         wget
         lazygit
         openssh
+        less
 
         # Development — Go
         go
@@ -123,9 +124,12 @@ stage_1_packages() {
         brightnessctl
         playerctl
         pamixer
+        sway-contrib
+        satty
 
         # System applets
         networkmanager
+        network-manager-applet
         blueman
         pavucontrol
         polkit-gnome
@@ -140,6 +144,9 @@ stage_1_packages() {
 
         # Build tools
         base-devel
+
+        # ssh
+        keychain
     )
 
     sudo pacman -S --needed --noconfirm "${packages[@]}"
@@ -261,6 +268,7 @@ stage_4_services() {
     local services=(
         systemd-resolved
         NetworkManager
+        bluetooth.service
         snapper-cleanup.timer
     )
 

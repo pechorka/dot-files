@@ -50,12 +50,41 @@ mode "resize" {
     bindsym Escape mode "default"
 }
 
+# Volume
+bindsym XF86AudioRaiseVolume exec pamixer -i 5
+bindsym XF86AudioLowerVolume exec pamixer -d 5
+bindsym XF86AudioMute exec pamixer -t
+bindsym XF86AudioMicMute exec pamixer --default-source -t
+
+# Media playback
+bindsym XF86AudioPlay exec playerctl play-pause
+bindsym XF86AudioPause exec playerctl pause
+bindsym XF86AudioNext exec playerctl next
+bindsym XF86AudioPrev exec playerctl previous
+
+# Brightness
+bindsym XF86MonBrightnessUp exec brightnessctl set +5%
+bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
+
+set $satty satty --filename - --fullscreen --copy-command wl-copy --initial-tool=arrow --actions-on-escape="save-to-clipboard,exit" --output-filename "$HOME/Pictures/Screenshots/satty-%Y%m%d-%H%M%S.png"
+
+# Alt+P: region screenshot with annotation
+bindsym Mod1+p exec grim -g "$(slurp -d)" -t ppm - | $satty
+
+# Alt+Shift+P: quick region screenshot straight to clipboard
+bindsym Mod1+Shift+p exec grimshot --notify copy area
+
 input type:keyboard {
     xkb_layout us,ru
     xkb_options grp:toggle,caps:ctrl_modifier
 }
 
-bar {
-    status_command while date +'%Y-%m-%d %H:%M'; do sleep 60; done
-    position top
+# Traditional scrolling (non-natural). This is the opposite of "reverse"/natural scroll.
+input type:touchpad {
+    natural_scroll disabled
 }
+
+exec_always --no-startup-id sh -c 'pkill -x waybar; waybar -c ~/.config/waybar/config.jsonc -s ~/.config/waybar/style.css'
+exec_always --no-startup-id sh -c 'pkill -x nm-applet; nm-applet'
+exec_always --no-startup-id sh -c 'pkill -x blueman-applet; blueman-applet'
+exec --no-startup-id /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
