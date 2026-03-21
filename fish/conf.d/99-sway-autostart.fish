@@ -1,1 +1,0 @@
-/nix/store/w961hffj77lpr6l6n2l4inhv6s4r4c6d-home-manager-files/.config/fish/conf.d/99-sway-autostart.fish

@@ -17,3 +17,12 @@ fish/fish_variables
 !nix/**
 
 !bootstrap.sh
+
+!system
+!system/**
+
+!config
+!config/**
+
+!docs
+!docs/**

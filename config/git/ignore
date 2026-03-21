@@ -1,0 +1,2 @@
+# Per-project Nix toolchain override (stored in VM metadata, not in repos)
+.nix-local
