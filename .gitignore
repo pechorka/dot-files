@@ -26,3 +26,6 @@ fish/fish_variables
 
 !docs
 !docs/**
+
+!sway
+!sway/**
