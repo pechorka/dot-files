@@ -36,6 +36,12 @@ error() { echo -e "${RED}[bootstrap]${NC} $1"; }
 stage_1_system_packages() {
     log "Stage 1 — Installing system packages via pacman..."
 
+    # Replace iptables with iptables-nft (required by incus, conflicts with base iptables)
+    if pacman -Qi iptables &>/dev/null && ! pacman -Qi iptables-nft &>/dev/null; then
+        log "Replacing iptables with iptables-nft (required by incus)..."
+        sudo pacman -S --needed --noconfirm --ask 4 iptables-nft
+    fi
+
     local packages=(
         # Display & compositor
         sway
