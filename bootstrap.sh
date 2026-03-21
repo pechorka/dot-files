@@ -50,7 +50,7 @@ stage_1_packages() {
         swayidle
         swaybg
         xdg-desktop-portal-wlr
-        xwayland
+        xorg-xwayland
 
         # Audio
         pipewire
@@ -175,14 +175,27 @@ stage_1_packages() {
     # Configure snapper for btrfs root snapshots
     if [ ! -f /etc/snapper/configs/root ]; then
         log "Configuring snapper..."
+
+        # Snapper create-config expects /.snapshots not to already be mounted/present
+        if mountpoint -q /.snapshots; then
+          sudo umount /.snapshots
+        fi
+
+        if [ -e /.snapshots ]; then
+          sudo rm -rf /.snapshots
+        fi
+
         sudo snapper -c root create-config /
 
+        # Replace Snapper-created subvolume with our dedicated @snapshots subvolume
         if sudo btrfs subvolume show /.snapshots &>/dev/null 2>&1; then
-            sudo btrfs subvolume delete /.snapshots
+          sudo btrfs subvolume delete /.snapshots
+        else
+          sudo rm -rf /.snapshots 2>/dev/null || true
         fi
+
         sudo mkdir -p /.snapshots
 
-        local root_dev
         root_dev=$(findmnt -n -o SOURCE /)
         root_dev=$(echo "$root_dev" | sed 's/\[.*\]//')
         sudo mount -o subvol=@snapshots,compress=zstd,noatime "$root_dev" /.snapshots
@@ -191,7 +204,7 @@ stage_1_packages() {
         sudo sed -i 's/^NUMBER_LIMIT=.*/NUMBER_LIMIT="5"/' /etc/snapper/configs/root
         sudo sed -i 's/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT="5"/' /etc/snapper/configs/root
 
-        log "  Snapper configured"
+        log "Snapper configured"
     else
         log "Snapper already configured, skipping."
     fi
