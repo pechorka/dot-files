@@ -18,7 +18,7 @@ set -euo pipefail
 # =============================================================================
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FLAKE_REPO="github:pechorka/devenv"  # TODO: create this repo
+FLAKE_REPO="$DOTFILES_DIR/nix"  # Shared Nix flake (lives in dotfiles)
 LOCAL_BIN="$HOME/.local/bin"
 
 RED='\033[0;31m'

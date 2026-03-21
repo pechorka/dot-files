@@ -81,7 +81,7 @@ Two separate concerns, two separate mechanisms:
 
 **Nix as unified package manager on host AND VMs:**
 - Nix (the package manager, not NixOS) installed on Arch host and inside every VM
-- Single shared flake repo (e.g., `github:user/devenv`) with layered profiles:
+- Single shared flake in the dotfiles repo (`dotfiles/nix/flake.nix`) with layered profiles:
   - `common` — fish shell, nix-your-shell, neovim, tmux, git, ripgrep, fd, jq, curl, all CLI tools (shared by host and VMs, ~80% of packages)
   - `host` — Sway-specific tools, browser, fonts, notification daemon, Incus client, anything needing a display
   - `vm-base` — headless Chromium, Playwright, build essentials, things only VMs need
@@ -99,12 +99,12 @@ Two separate concerns, two separate mechanisms:
 
 **Nix for developer toolchains (frequent changes):**
 - Go, Node, Python, Rust, CLI tools, dev utilities — all managed by Nix via the shared flake
-- Nix flake repo lives on the host — host is always the source of truth
+- Nix flake lives in the dotfiles repo (`dotfiles/nix/`) — host is always the source of truth
 - On VM start/resume, wrapper compares a hash of the entire flake directory (flake.nix + flake.lock + any other flake files) on host vs inside VM (instant, no network)
 - If identical → attach immediately, zero delay
 - If different → push updated flake into VM via `incus file push`, then run `nix profile upgrade` inside VM via `incus exec` (VM pulls derivations from Nix binary cache over internet)
 - This catches both input changes (new package versions via flake.lock) and profile changes (adding/removing tools in flake.nix)
-- Routine updates (new Go version, new Node LTS) = update flake repo on host, all VMs converge on next start/resume
+- Routine updates (new Go version, new Node LTS) = update flake in dotfiles, all VMs converge on next start/resume
 - No manual intervention, no scripts, no per-VM commands
 - Host can auto-update on login or manually via same mechanism
 - Project-level deps (node_modules, Go modules) reinstalled from lockfiles as part of rebuild
@@ -204,7 +204,7 @@ Two separate concerns, two separate mechanisms:
 The bootstrap script is the single entry point for turning a fresh Arch install into a fully working development environment. It runs once after the base Arch installation (which is manual: partitioning, pacstrap, bootloader, create user, enable networking — the standard `archinstall` or manual process).
 
 ### Prerequisites (done manually as part of Arch install — see companion installation guide)
-- Arch base system installed and booting (btrfs root with subvolumes, snapper + snap-pac configured)
+- Arch base system installed and booting (btrfs root with subvolumes: @, @home, @var, @nix, @snapshots)
 - Alpine recovery partition installed and bootable
 - User account created with sudo access
 - Internet connectivity working
@@ -220,6 +220,7 @@ Responsibility: hardware-coupled and system-level software that Nix should not m
 - Graphics drivers (mesa, vulkan, intel-media-driver for i7-1365U)
 - incus
 - zram-generator (compressed swap in RAM — no swap partition needed)
+- snapper + snap-pac (btrfs snapshot management, auto-snapshot before/after pacman updates)
 - base-devel (for AUR helper if needed)
 - AUR helper (yay or paru) for packages not in official repos
 - Minimal set — everything else comes from Nix
@@ -232,8 +233,7 @@ Responsibility: install Nix the package manager on Arch.
 
 ### Stage 3 — Userspace Tooling (Nix)
 Responsibility: all user-facing tools, editor, shell, CLI utilities.
-- Clone the shared flake repo (e.g., `github:user/devenv`)
-- Run `nix profile install .#host` — installs the host profile (common + host layers)
+- Run `nix profile install ./nix#host` — installs the host profile (common + host layers)
 - This provides: Go (for building vm CLI), neovim, tmux, git, ripgrep, fd, jq, curl, fish shell, nix-your-shell, Ghostty terminal emulator, browser, fonts, and all other daily-use tools
 - Single command, fully reproducible, version-pinned by the flake lockfile
 
