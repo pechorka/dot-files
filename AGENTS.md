@@ -1,0 +1,1 @@
+This is a dotfiles repository rooted at `~/.config`. It contains personal configuration files for various tools (sway, fish, tmux, ghostty, etc.) and a `bootstrap.sh` script that sets up a fresh Arch Linux system by installing packages and configuring the shell and services.
