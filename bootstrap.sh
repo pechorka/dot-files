@@ -112,6 +112,7 @@ stage_1_packages() {
         # Audio
         pipewire
         pipewire-pulse
+        sof-firmware
         wireplumber
 
         # Graphics (Intel i7-1365U)
