@@ -1,0 +1,26 @@
+# Performance
+gtk-single-instance = true
+scrollback-limit = 10000000
+
+# Shell integration
+shell-integration = detect
+cursor-click-to-move = true
+
+# Copy & paste
+copy-on-select = clipboard
+clipboard-trim-trailing-spaces = true
+clipboard-paste-protection = true
+clipboard-paste-bracketed-safe = true
+
+# Mouse & input
+focus-follows-mouse = true
+
+# Cursor
+cursor-style-blink = false
+
+# Window (Sway)
+window-decoration = false
+confirm-close-surface = false
+
+# URLs
+link-url = true
