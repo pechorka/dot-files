@@ -138,6 +138,7 @@ stage_1_packages() {
 
         # Sandboxing (for future per-project isolation)
         bubblewrap
+        mise
 
         # Build tools
         base-devel
