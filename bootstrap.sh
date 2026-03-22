@@ -141,6 +141,9 @@ stage_1_packages() {
         # Build tools
         base-devel
 
+        # ssh
+        keychain
+
     )
 
     sudo pacman -S --needed --noconfirm "${packages[@]}"
@@ -224,12 +227,6 @@ stage_2_system() {
     if [ -f "$DOTFILES_DIR/system/zram-generator.conf" ]; then
         sudo ln -sfn "$DOTFILES_DIR/system/zram-generator.conf" /etc/systemd/zram-generator.conf
         log "  Linked zram-generator config"
-    fi
-
-    if [ -f "$DOTFILES_DIR/system/gpg-agent.conf" ]; then
-        mkdir -p "$HOME/.gnupg"
-        ln -sfn "$DOTFILES_DIR/system/gpg-agent.conf" "$HOME/.gnupg/gpg-agent.conf"
-        log "  Linked gpg-agent config"
     fi
 
     fish -c "hide_app avahi-discover btop bssh bvnc jconsole-java-openjdk jshell-java-openjdk nvim qv4l2 qvidcap vim"
