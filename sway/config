@@ -86,6 +86,8 @@ input type:touchpad {
     natural_scroll enabled
 }
 
+default_border none
+
 exec_always --no-startup-id sh -c 'pkill -x nm-applet; nm-applet'
 exec_always --no-startup-id sh -c 'pkill -x blueman-applet; blueman-applet'
 exec --no-startup-id /usr/bin/lxqt-policykit-agent
