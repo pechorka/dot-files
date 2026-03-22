@@ -127,6 +127,9 @@ stage_1_packages() {
         # Swap (compressed, in RAM)
         zram-generator
 
+        # Laptop power management
+        tlp
+
         # Snapshot management
         snapper
         snap-pac
@@ -292,6 +295,11 @@ stage_2_system() {
         log "  Installed systemd-boot loader config"
     fi
 
+    if [ -f "$DOTFILES_DIR/system/tlp.d/10-laptop-power.conf" ]; then
+        install_managed_file "$DOTFILES_DIR/system/tlp.d/10-laptop-power.conf" /etc/tlp.d/10-laptop-power.conf
+        log "  Installed TLP power policy"
+    fi
+
     sudo systemctl daemon-reload
     if sudo systemctl start systemd-zram-setup@zram0.service; then
         log "  Activated zram swap"
@@ -338,24 +346,32 @@ stage_3_shell() {
 stage_4_services() {
     log "Stage 4 — Enabling systemd services..."
 
-    local services=(
-        systemd-resolved
-        NetworkManager
-        bluetooth.service
-        snapper-cleanup.timer
-    )
-
-    for svc in "${services[@]}"; do
-        enable_system_service "$svc"
-    done
-
     local disabled_services=(
+        power-profiles-daemon.service
         NetworkManager-wait-online.service
         snapper-timeline.timer
     )
     for svc in "${disabled_services[@]}"; do
         disable_system_service "$svc"
     done
+
+    local services=(
+        systemd-resolved
+        NetworkManager
+        bluetooth.service
+        snapper-cleanup.timer
+        tlp.service
+    )
+
+    for svc in "${services[@]}"; do
+        enable_system_service "$svc"
+    done
+
+    if sudo systemctl restart tlp.service &>/dev/null; then
+        log "  Reapplied tlp.service"
+    else
+        warn "  Failed to reapply tlp.service"
+    fi
 
     local user_services=(pipewire pipewire-pulse wireplumber)
     for svc in "${user_services[@]}"; do

@@ -459,7 +459,7 @@ cd ~/dotfiles
 ./bootstrap.sh
 ```
 
-This script installs the managed `zram-generator` and `systemd-boot` config files, applies the Snapper cleanup-only policy, enables the core workstation services, and disables `NetworkManager-wait-online.service` plus `snapper-timeline.timer`. After it completes, reboot into your fully configured Sway environment.
+This script installs the managed `zram-generator` and `systemd-boot` config files, applies the Snapper cleanup-only policy, enables the core workstation services, disables `NetworkManager-wait-online.service` plus `snapper-timeline.timer`, installs `tlp`, applies a managed laptop power policy from `/etc/tlp.d/10-laptop-power.conf`, disables `power-profiles-daemon.service` if present, and restores the Lenovo battery thresholds to `40/80`. After it completes, reboot into your fully configured Sway environment.
 
 ### 9.3 Optional Fingerprint Setup
 If the laptop has a supported fingerprint reader, run:
@@ -481,14 +481,21 @@ Then test a fresh TTY login and `swaylock` unlock before depending on fingerprin
 ```bash
 zramctl
 cat /proc/swaps
-systemctl list-unit-files --state=enabled | rg 'NetworkManager|systemd-resolved|snapper'
+systemctl list-unit-files --state=enabled | rg 'NetworkManager|systemd-resolved|snapper|tlp'
+systemctl is-enabled NetworkManager-wait-online.service snapper-timeline.timer power-profiles-daemon.service 2>/dev/null || true
+sudo tlp-stat -c | rg 'START_CHARGE_THRESH_BAT0|STOP_CHARGE_THRESH_BAT0|CPU_ENERGY_PERF_POLICY|PLATFORM_PROFILE'
+cat /sys/class/power_supply/BAT0/charge_control_start_threshold
+cat /sys/class/power_supply/BAT0/charge_control_end_threshold
 systemd-analyze
 ```
 
 Expected results:
 - `zram0` exists and appears in `/proc/swaps`
-- `NetworkManager.service`, `systemd-resolved.service`, and `snapper-cleanup.timer` are enabled
+- `NetworkManager.service`, `systemd-resolved.service`, `snapper-cleanup.timer`, and `tlp.service` are enabled
 - `NetworkManager-wait-online.service` and `snapper-timeline.timer` are not enabled
+- `power-profiles-daemon.service` is disabled or absent
+- `tlp-stat -c` shows `START_CHARGE_THRESH_BAT0=40`, `STOP_CHARGE_THRESH_BAT0=80`, `CPU_ENERGY_PERF_POLICY_ON_AC=balance_performance`, `CPU_ENERGY_PERF_POLICY_ON_BAT=balance_power`, `PLATFORM_PROFILE_ON_AC=performance`, and `PLATFORM_PROFILE_ON_BAT=balanced`
+- the sysfs threshold files read back `40` and `80`
 - boot no longer waits on a long `systemd-boot` menu timeout
 
 ---
