@@ -225,7 +225,7 @@ stage_1_packages() {
     fi
 
     # AUR packages
-    local aur_packages=(ghostty yq-go neovim-nightly-bin quickemu)
+    local aur_packages=(ghostty yq-go neovim-nightly-bin quickemu handy)
     for pkg in "${aur_packages[@]}"; do
         if ! pacman -Qi "$pkg" &>/dev/null; then
             log "Installing $pkg from AUR..."

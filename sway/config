@@ -83,6 +83,8 @@ bindsym Mod1+Shift+p exec grim -g "$(slurp -d)" - | wl-copy
 # Lock screen
 bindsym $mod+Escape exec $lock
 
+bindsym $mod+o exec handy --toggle-transcription
+
 input type:keyboard {
     xkb_layout us,ru
     xkb_options grp:toggle,caps:ctrl_modifier
