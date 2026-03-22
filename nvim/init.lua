@@ -71,9 +71,6 @@ vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "remove search high
 vim.keymap.set("n", "<C-k>", "<cmd>cnext<CR>zz")
 vim.keymap.set("n", "<C-j>", "<cmd>cprev<CR>zz")
 
---local picker = require('picker')
---vim.keymap.set('n', '<leader>ff', picker.files, { desc = 'Find file' })
-
 -- insert if err != nil {return err}
 vim.keymap.set("n", "<leader>ee", "oif err != nil {<CR>}<Esc>Oreturn err<Esc>bi")
 
@@ -113,8 +110,6 @@ local function setup_lsp()
     "pyright",        -- npm i -g pyright
     "ts_ls",          -- npm i -g typescript typescript-language-server
     "jsonls", "html", -- npm i -g vscode-langservers-extracted
-    -- "htmx",           -- cargo install htmx-lsp
-    --"tsgo",           -- npm install @typescript/native-preview
     "ols", -- https://github.com/DanielGavin/ols?tab=readme-ov-file#installation
     "zls",
     "kotlin_lsp",
@@ -126,18 +121,6 @@ local function setup_lsp()
       vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, bufopts)
     end,
   })
-  --vim.api.nvim_create_autocmd("LspProgress", {
-  --  callback = function(ev)
-  --    local client = vim.lsp.get_client_by_id(ev.data.client_id)
-  --    local value = ev.data.params.value
-  --    if client and value and value.kind then
-  --      local msg = value.message or ""
-  --      local title = value.title or ""
-  --      local pct = value.percentage and string.format(" (%d%%)", value.percentage) or ""
-  --      vim.notify(string.format("[%s] %s %s%s", client.name, title, msg, pct), vim.log.levels.INFO)
-  --    end
-  --  end,
-  --})
 end
 
 local function setup_ts()

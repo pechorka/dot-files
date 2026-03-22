@@ -4,10 +4,6 @@
       "rev": "40380e7",
       "src": "https://github.com/Saghen/blink.cmp"
     },
-    "hardtime.nvim": {
-      "rev": "b4e4319",
-      "src": "https://github.com/m4xshen/hardtime.nvim"
-    },
     "mini.pick": {
       "rev": "08a7220",
       "src": "https://github.com/nvim-mini/mini.pick"
@@ -20,10 +16,6 @@
       "rev": "42fc28ba",
       "src": "https://github.com/nvim-treesitter/nvim-treesitter",
       "version": "'master'"
-    },
-    "render-markdown.nvim": {
-      "rev": "6a744f0",
-      "src": "https://github.com/MeanderingProgrammer/render-markdown.nvim"
     }
   }
 }

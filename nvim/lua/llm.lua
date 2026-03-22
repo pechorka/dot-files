@@ -5,7 +5,6 @@ local inflight = false
 local config = {
   api_url = "http://desktop-porm1e3:9999/v1",
   model = "qwen/qwen3-coder-30b",
-  --model = "openai/gpt-oss-20b",
   request_timeout = 30,
   connect_timeout = 5,
 }
