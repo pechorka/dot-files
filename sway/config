@@ -79,9 +79,8 @@ input type:keyboard {
     xkb_options grp:toggle,caps:ctrl_modifier
 }
 
-# Traditional scrolling (non-natural). This is the opposite of "reverse"/natural scroll.
 input type:touchpad {
-    natural_scroll disabled
+    natural_scroll enabled
 }
 
 exec_always --no-startup-id sh -c 'pkill -x waybar; waybar -c ~/.config/waybar/config.jsonc -s ~/.config/waybar/style.css'

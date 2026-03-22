@@ -30,19 +30,15 @@
   },
 
   "memory": {
-    "format": "ram {used}G/{total}G",
+    "format": "{used:0.0f}G",
     "interval": 10,
     "tooltip": false
   },
 
   "battery": {
-    "format": "bat {capacity}%",
-    "format-charging": "chg {capacity}%",
-    "format-plugged": "ac",
-    "states": {
-      "warning": 30,
-      "critical": 15
-    },
+    "format": "{capacity}%",
+    "format-charging": "bat {capacity}%",
+    "format-full": "{capacity}%",
     "tooltip": false
   },
 
