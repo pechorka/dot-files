@@ -28,6 +28,64 @@ log() { echo -e "${GREEN}[bootstrap]${NC} $1"; }
 warn() { echo -e "${YELLOW}[bootstrap]${NC} $1"; }
 error() { echo -e "${RED}[bootstrap]${NC} $1"; }
 
+install_managed_file() {
+    local src="$1"
+    local dest="$2"
+    local mode="${3:-644}"
+
+    if [ ! -f "$src" ]; then
+        warn "Missing managed file: $src"
+        return 1
+    fi
+
+    if sudo test -L "$dest"; then
+        sudo rm -f "$dest"
+    fi
+
+    sudo install -Dm"$mode" "$src" "$dest"
+}
+
+set_snapper_value() {
+    local key="$1"
+    local value="$2"
+
+    sudo sed -i "s/^${key}=.*/${key}=\"${value}\"/" /etc/snapper/configs/root
+}
+
+configure_snapper_policy() {
+    if [ ! -f /etc/snapper/configs/root ]; then
+        warn "Snapper root config not found — skipping retention policy"
+        return
+    fi
+
+    set_snapper_value TIMELINE_CREATE no
+    set_snapper_value NUMBER_LIMIT 3
+    set_snapper_value NUMBER_LIMIT_IMPORTANT 3
+    log "Applied Snapper cleanup-only retention policy"
+}
+
+enable_system_service() {
+    local svc="$1"
+
+    if systemctl is-enabled "$svc" &>/dev/null; then
+        log "  $svc already enabled"
+    else
+        sudo systemctl enable --now "$svc"
+        log "  Enabled $svc"
+    fi
+}
+
+disable_system_service() {
+    local svc="$1"
+
+    if systemctl is-enabled "$svc" &>/dev/null || systemctl is-active "$svc" &>/dev/null; then
+        sudo systemctl disable --now "$svc" &>/dev/null || sudo systemctl disable "$svc" &>/dev/null || true
+        log "  Disabled $svc"
+    else
+        log "  $svc already disabled"
+    fi
+}
+
 # =============================================================================
 # Stage 1 — System Packages (pacman + AUR)
 # =============================================================================
@@ -205,14 +263,12 @@ stage_1_packages() {
         root_dev=$(echo "$root_dev" | sed 's/\[.*\]//')
         sudo mount -o subvol=@snapshots,compress=zstd,noatime "$root_dev" /.snapshots
 
-        sudo sed -i 's/^TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/' /etc/snapper/configs/root
-        sudo sed -i 's/^NUMBER_LIMIT=.*/NUMBER_LIMIT="5"/' /etc/snapper/configs/root
-        sudo sed -i 's/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT="5"/' /etc/snapper/configs/root
-
         log "Snapper configured"
     else
-        log "Snapper already configured, skipping."
+        log "Snapper already configured, applying policy."
     fi
+
+    configure_snapper_policy
 
     log "Stage 1 complete."
 }
@@ -226,12 +282,27 @@ stage_2_system() {
     mkdir -p "$LOCAL_BIN"
 
     if [ -f "$DOTFILES_DIR/system/zram-generator.conf" ]; then
-        sudo ln -sfn "$DOTFILES_DIR/system/zram-generator.conf" /etc/systemd/zram-generator.conf
-        log "  Linked zram-generator config"
+        install_managed_file "$DOTFILES_DIR/system/zram-generator.conf" /etc/systemd/zram-generator.conf
+        log "  Installed zram-generator config"
     fi
 
-    fish -c "hide_app avahi-discover btop bssh bvnc jconsole-java-openjdk jshell-java-openjdk nvim qv4l2 qvidcap vim"
-    log "  Hidden default apps from launcher"
+    if [ -f "$DOTFILES_DIR/system/loader.conf" ]; then
+        install_managed_file "$DOTFILES_DIR/system/loader.conf" /boot/loader/loader.conf
+        log "  Installed systemd-boot loader config"
+    fi
+
+    sudo systemctl daemon-reload
+    if sudo systemctl start systemd-zram-setup@zram0.service; then
+        log "  Activated zram swap"
+    else
+        warn "  Failed to activate zram swap"
+    fi
+
+    if fish -c "hide_app avahi-discover btop bssh bvnc jconsole-java-openjdk jshell-java-openjdk nvim qv4l2 qvidcap vim"; then
+        log "  Hidden default apps from launcher"
+    else
+        warn "  Failed to hide one or more launcher entries"
+    fi
 
     log "Stage 2 complete."
 }
@@ -274,12 +345,15 @@ stage_4_services() {
     )
 
     for svc in "${services[@]}"; do
-        if systemctl is-enabled "$svc" &>/dev/null; then
-            log "  $svc already enabled"
-        else
-            sudo systemctl enable --now "$svc"
-            log "  Enabled $svc"
-        fi
+        enable_system_service "$svc"
+    done
+
+    local disabled_services=(
+        NetworkManager-wait-online.service
+        snapper-timeline.timer
+    )
+    for svc in "${disabled_services[@]}"; do
+        disable_system_service "$svc"
     done
 
     local user_services=(pipewire pipewire-pulse wireplumber)

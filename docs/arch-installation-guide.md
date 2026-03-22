@@ -290,7 +290,7 @@ Uncomment the line: `%wheel ALL=(ALL:ALL) ALL`
 Note: the shell is bash for now — fish will come from Nix later and you'll change the default shell after bootstrap.
 
 ### 6.7 Snapper
-Snapper configuration (config creation, snapshot subvolume fixup, limits, and snap-pac installation) is handled by `bootstrap.sh`. No manual steps needed here.
+Snapper configuration (config creation, snapshot subvolume fixup, limits, and snap-pac installation) is handled by `bootstrap.sh`. The bootstrap keeps `snapper-cleanup.timer` enabled, disables timeline snapshots, and caps retained `number` / `important` snapshots at `3` each.
 
 ### 6.8 Boot Loader (systemd-boot)
 ```bash
@@ -330,6 +330,8 @@ systemctl enable NetworkManager
 systemctl enable systemd-resolved
 systemctl enable snapper-cleanup.timer
 ```
+
+Note: enabling `NetworkManager` also enables `NetworkManager-wait-online.service` via the packaged unit. `bootstrap.sh` disables that wait-online unit on the workstation profile after first boot.
 
 ### 6.10 Exit Chroot
 ```bash
@@ -457,7 +459,21 @@ cd ~/dotfiles
 ./bootstrap.sh
 ```
 
-This script handles Stage 1 through Stage 7 of the bootstrap process documented in the requirements. After it completes, reboot into your fully configured Sway environment.
+This script installs the managed `zram-generator` and `systemd-boot` config files, applies the Snapper cleanup-only policy, enables the core workstation services, and disables `NetworkManager-wait-online.service` plus `snapper-timeline.timer`. After it completes, reboot into your fully configured Sway environment.
+
+### 9.3 Verify Bootstrap State
+```bash
+zramctl
+cat /proc/swaps
+systemctl list-unit-files --state=enabled | rg 'NetworkManager|systemd-resolved|snapper'
+systemd-analyze
+```
+
+Expected results:
+- `zram0` exists and appears in `/proc/swaps`
+- `NetworkManager.service`, `systemd-resolved.service`, and `snapper-cleanup.timer` are enabled
+- `NetworkManager-wait-online.service` and `snapper-timeline.timer` are not enabled
+- boot no longer waits on a long `systemd-boot` menu timeout
 
 ---
 
