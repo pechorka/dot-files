@@ -48,7 +48,6 @@ stage_1_packages() {
         sway
         swaylock
         swayidle
-        swaybg
         xdg-desktop-portal-wlr
         xorg-xwayland
 
