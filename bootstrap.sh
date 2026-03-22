@@ -115,7 +115,6 @@ stage_1_packages() {
         podman
 
         # Wayland desktop tools
-        waybar
         wofi
         mako
         grim

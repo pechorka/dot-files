@@ -51,10 +51,10 @@ mode "resize" {
 }
 
 # Volume
-bindsym XF86AudioRaiseVolume exec pamixer -i 5
-bindsym XF86AudioLowerVolume exec pamixer -d 5
-bindsym XF86AudioMute exec pamixer -t
-bindsym XF86AudioMicMute exec pamixer --default-source -t
+bindsym XF86AudioRaiseVolume exec pamixer -i 5 && pkill -USR1 -f status.sh
+bindsym XF86AudioLowerVolume exec pamixer -d 5 && pkill -USR1 -f status.sh
+bindsym XF86AudioMute        exec pamixer -t   && pkill -USR1 -f status.sh
+bindsym XF86AudioMicMute     exec pamixer --default-source -t && pkill -USR1 -f status.sh
 
 # Media playback
 bindsym XF86AudioPlay exec playerctl play-pause
@@ -83,7 +83,23 @@ input type:touchpad {
     natural_scroll enabled
 }
 
-exec_always --no-startup-id sh -c 'pkill -x waybar; waybar -c ~/.config/waybar/config.jsonc -s ~/.config/waybar/style.css'
 exec_always --no-startup-id sh -c 'pkill -x nm-applet; nm-applet'
 exec_always --no-startup-id sh -c 'pkill -x blueman-applet; blueman-applet'
 exec --no-startup-id /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+
+bar {
+    position top
+    font Liberation Sans 12
+    status_command ~/.config/sway/status.sh
+    tray_output *
+
+    colors {
+        background #121212
+        statusline #e8e8e8
+        separator  #444444
+
+        focused_workspace  #333333 #333333 #ffffff
+        inactive_workspace #121212 #121212 #666666
+        urgent_workspace   #900000 #900000 #ffffff
+    }
+}
