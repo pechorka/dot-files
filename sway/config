@@ -88,8 +88,6 @@ input type:touchpad {
 
 default_border none
 
-exec_always --no-startup-id sh -c 'pkill -x nm-applet; nm-applet'
-exec_always --no-startup-id sh -c 'pkill -x blueman-applet; blueman-applet'
 exec --no-startup-id /usr/bin/lxqt-policykit-agent
 exec swayidle -w \
     timeout 600 'swaylock -f -c 000000'

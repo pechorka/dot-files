@@ -127,7 +127,6 @@ stage_1_packages() {
 
         # System applets
         networkmanager
-        network-manager-applet
         blueman
         pavucontrol
         lxqt-policykit 
