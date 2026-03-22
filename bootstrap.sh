@@ -229,6 +229,12 @@ stage_2_system() {
         log "  Linked zram-generator config"
     fi
 
+    mkdir -p "$HOME/.local/share/applications"
+    for f in "$DOTFILES_DIR/applications/"*.desktop; do
+        ln -sfn "$f" "$HOME/.local/share/applications/$(basename "$f")"
+    done
+    log "  Linked desktop overrides"
+
     log "Stage 2 complete."
 }
 
