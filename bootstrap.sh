@@ -122,7 +122,6 @@ stage_1_packages() {
         brightnessctl
         playerctl
         pamixer
-        sway-contrib
         satty
 
         # System applets
