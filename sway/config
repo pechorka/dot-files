@@ -74,6 +74,9 @@ bindsym Mod1+p exec grim -g "$(slurp -d)" -t ppm - | $satty
 # Alt+Shift+P: quick region screenshot straight to clipboard
 bindsym Mod1+Shift+p exec grimshot --notify copy area
 
+# Lock screen
+bindsym $mod+Escape exec swaylock -f -c 000000
+
 input type:keyboard {
     xkb_layout us,ru
     xkb_options grp:toggle,caps:ctrl_modifier
@@ -86,6 +89,8 @@ input type:touchpad {
 exec_always --no-startup-id sh -c 'pkill -x nm-applet; nm-applet'
 exec_always --no-startup-id sh -c 'pkill -x blueman-applet; blueman-applet'
 exec --no-startup-id /usr/bin/lxqt-policykit-agent
+exec swayidle -w \
+    timeout 600 'swaylock -f -c 000000'
 
 bar {
     position top
