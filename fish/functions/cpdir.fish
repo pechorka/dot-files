@@ -21,16 +21,7 @@ function cpdir
         echo '```' >> $tmpfile
     end
 
-    if type -q xclip
-        cat $tmpfile | xclip -selection clipboard
-        echo "✅ Copied formatted output to clipboard (via xclip)"
-    else if type -q xsel
-        cat $tmpfile | xsel --clipboard --input
-        echo "✅ Copied formatted output to clipboard (via xsel)"
-    else
-        echo "⚠️ Neither xclip nor xsel found. Output saved to $tmpfile"
-        echo "Install one with: sudo apt install xclip"
-    end
-
+    wl-copy < $tmpfile
+    echo "Copied formatted output to clipboard"
     rm $tmpfile
 end
