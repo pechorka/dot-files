@@ -13,9 +13,6 @@ fish/fish_variables
 !tmux
 !tmux/**
 
-!nix
-!nix/**
-
 !bootstrap.sh
 
 !system
@@ -30,8 +27,3 @@ fish/fish_variables
 !sway
 !sway/**
 
-!waybar
-!waybar/**
-
-!applications
-!applications/**
