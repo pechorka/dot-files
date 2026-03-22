@@ -74,7 +74,6 @@ stage_1_packages() {
 
         # Shells & editors
         fish
-        neovim
         tmux
 
         # CLI tools
@@ -82,7 +81,6 @@ stage_1_packages() {
         fzf
         fd
         jq
-        htop
         bat
         curl
         wget
@@ -143,8 +141,6 @@ stage_1_packages() {
         # Build tools
         base-devel
 
-        # ssh
-        keychain
     )
 
     sudo pacman -S --needed --noconfirm "${packages[@]}"
@@ -162,7 +158,7 @@ stage_1_packages() {
     fi
 
     # AUR packages
-    local aur_packages=(ghostty yq-go)
+    local aur_packages=(ghostty yq-go neovim-nightly-bin)
     for pkg in "${aur_packages[@]}"; do
         if ! pacman -Qi "$pkg" &>/dev/null; then
             log "Installing $pkg from AUR..."
@@ -230,7 +226,13 @@ stage_2_system() {
         log "  Linked zram-generator config"
     fi
 
-    fish -c "hide_app avahi-discover btop bssh bvnc htop jconsole-java-openjdk jshell-java-openjdk nvim qv4l2 qvidcap vim"
+    if [ -f "$DOTFILES_DIR/system/gpg-agent.conf" ]; then
+        mkdir -p "$HOME/.gnupg"
+        ln -sfn "$DOTFILES_DIR/system/gpg-agent.conf" "$HOME/.gnupg/gpg-agent.conf"
+        log "  Linked gpg-agent config"
+    fi
+
+    fish -c "hide_app avahi-discover btop bssh bvnc jconsole-java-openjdk jshell-java-openjdk nvim qv4l2 qvidcap vim"
     log "  Hidden default apps from launcher"
 
     log "Stage 2 complete."
