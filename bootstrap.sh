@@ -89,6 +89,7 @@ stage_1_packages() {
         lazygit
         openssh
         less
+        btop
 
         # Development — Go
         go
