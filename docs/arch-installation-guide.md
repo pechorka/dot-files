@@ -461,7 +461,23 @@ cd ~/dotfiles
 
 This script installs the managed `zram-generator` and `systemd-boot` config files, applies the Snapper cleanup-only policy, enables the core workstation services, and disables `NetworkManager-wait-online.service` plus `snapper-timeline.timer`. After it completes, reboot into your fully configured Sway environment.
 
-### 9.3 Verify Bootstrap State
+### 9.3 Optional Fingerprint Setup
+If the laptop has a supported fingerprint reader, run:
+```bash
+./bootstrap-fingerprint.sh
+```
+
+This optional script installs `fprintd` and `libfprint`, confirms the current PAM include chain, and adds fingerprint auth to `TTY login` plus `swaylock` by patching `/etc/pam.d/system-login`. It deliberately leaves `sudo` password-only because terminal fingerprint prompts have a weaker user-attention model than login and lock-screen flows.
+
+After the script finishes:
+```bash
+fprintd-enroll
+fprintd-verify
+```
+
+Then test a fresh TTY login and `swaylock` unlock before depending on fingerprint day to day.
+
+### 9.4 Verify Bootstrap State
 ```bash
 zramctl
 cat /proc/swaps

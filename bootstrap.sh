@@ -390,6 +390,7 @@ main() {
     log "Next steps:"
     log "  1. Log out and back in (for fish shell)"
     log "  2. Start Sway from TTY: sway"
+    log "  3. Optional: run ./bootstrap-fingerprint.sh for TTY login + swaylock fingerprint auth"
 }
 
 main "$@"

@@ -14,6 +14,7 @@ fish/fish_variables
 !tmux/**
 
 !bootstrap.sh
+!bootstrap-fingerprint.sh
 
 !system
 !system/**
