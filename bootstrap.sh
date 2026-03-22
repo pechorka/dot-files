@@ -131,7 +131,7 @@ stage_1_packages() {
         network-manager-applet
         blueman
         pavucontrol
-        polkit-gnome
+        lxqt-policykit 
 
         # Fonts
         noto-fonts-emoji

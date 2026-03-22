@@ -85,7 +85,7 @@ input type:touchpad {
 
 exec_always --no-startup-id sh -c 'pkill -x nm-applet; nm-applet'
 exec_always --no-startup-id sh -c 'pkill -x blueman-applet; blueman-applet'
-exec --no-startup-id /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+exec --no-startup-id /usr/bin/lxqt-policykit-agent
 
 bar {
     position top
