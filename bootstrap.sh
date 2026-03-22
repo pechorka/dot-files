@@ -108,6 +108,7 @@ stage_1_packages() {
         swayidle
         xdg-desktop-portal-wlr
         xorg-xwayland
+        wdisplays
 
         # Audio
         pipewire
