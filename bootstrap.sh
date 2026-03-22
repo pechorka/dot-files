@@ -99,6 +99,7 @@ stage_1_packages() {
         # Development — JS/TS
         nodejs
         pnpm
+        npm
 
         # Development — JVM
         jdk-openjdk
