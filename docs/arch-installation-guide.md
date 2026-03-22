@@ -289,36 +289,8 @@ Uncomment the line: `%wheel ALL=(ALL:ALL) ALL`
 
 Note: the shell is bash for now — fish will come from Nix later and you'll change the default shell after bootstrap.
 
-### 6.7 Configure Snapper
-Create a snapper config for the root subvolume:
-```bash
-snapper -c root create-config /
-```
-
-Snapper will try to create its own `.snapshots` subvolume, but we already have `@snapshots`. Fix this:
-```bash
-btrfs subvolume delete /.snapshots
-mkdir /.snapshots
-mount -o subvol=@snapshots,compress=zstd,noatime /dev/nvme0n1p3 /.snapshots
-```
-
-Edit snapper config to set snapshot limits:
-```bash
-vim /etc/snapper/configs/root
-```
-Set these values (keep last 5 pre/post snapshots, clean up old ones automatically):
-```
-TIMELINE_CREATE="no"
-NUMBER_LIMIT="5"
-NUMBER_LIMIT_IMPORTANT="5"
-```
-
-We don't need timeline snapshots — we only want pre/post pacman snapshots. Install the pacman hook:
-```bash
-pacman -S snap-pac
-```
-
-This automatically creates a btrfs snapshot before and after every `pacman -Syu`. If an update breaks the system, the pre-update snapshot is there to roll back to.
+### 6.7 Snapper
+Snapper configuration (config creation, snapshot subvolume fixup, limits, and snap-pac installation) is handled by `bootstrap.sh`. No manual steps needed here.
 
 ### 6.8 Boot Loader (systemd-boot)
 ```bash
