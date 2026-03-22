@@ -1,11 +1,12 @@
 set $mod Mod4
 set $term ghostty
 set $menu wofi --show drun
+set $lock swaylock -f -c 000000
 
 bindsym $mod+Return exec $term
 bindsym $mod+d exec $menu
 bindsym $mod+Shift+q kill
-bindsym $mod+Shift+e exec swaymsg exit
+bindsym $mod+Shift+e exec swaynag -t warning -m 'Exit sway session?' -B 'Yes, exit sway' 'swaymsg exit'
 bindsym $mod+Shift+c reload
 
 bindsym $mod+h focus left
@@ -35,11 +36,16 @@ bindsym $mod+Shift+6 move container to workspace 6
 bindsym $mod+Shift+7 move container to workspace 7
 bindsym $mod+Shift+8 move container to workspace 8
 bindsym $mod+Shift+9 move container to workspace 9
+workspace_auto_back_and_forth yes
 
 bindsym $mod+v splitv
 bindsym $mod+b splith
 bindsym $mod+f fullscreen toggle
+bindsym $mod+space focus mode_toggle
+bindsym $mod+a focus parent
 bindsym $mod+Shift+space floating toggle
+bindsym $mod+Shift+minus move scratchpad
+bindsym $mod+minus scratchpad show
 bindsym $mod+r mode "resize"
 mode "resize" {
     bindsym h resize shrink width 10px
@@ -51,20 +57,20 @@ mode "resize" {
 }
 
 # Volume
-bindsym XF86AudioRaiseVolume exec pamixer -i 5 && pkill -USR1 -f status.sh
-bindsym XF86AudioLowerVolume exec pamixer -d 5 && pkill -USR1 -f status.sh
-bindsym XF86AudioMute        exec pamixer -t   && pkill -USR1 -f status.sh
-bindsym XF86AudioMicMute     exec pamixer --default-source -t && pkill -USR1 -f status.sh
+bindsym --locked XF86AudioRaiseVolume exec pamixer -i 5 && ~/.config/sway/status-refresh.sh
+bindsym --locked XF86AudioLowerVolume exec pamixer -d 5 && ~/.config/sway/status-refresh.sh
+bindsym --locked XF86AudioMute exec pamixer -t && ~/.config/sway/status-refresh.sh
+bindsym --locked XF86AudioMicMute exec pamixer --default-source -t
 
 # Media playback
-bindsym XF86AudioPlay exec playerctl play-pause
-bindsym XF86AudioPause exec playerctl pause
-bindsym XF86AudioNext exec playerctl next
-bindsym XF86AudioPrev exec playerctl previous
+bindsym --locked XF86AudioPlay exec playerctl play-pause
+bindsym --locked XF86AudioPause exec playerctl pause
+bindsym --locked XF86AudioNext exec playerctl next
+bindsym --locked XF86AudioPrev exec playerctl previous
 
 # Brightness
-bindsym XF86MonBrightnessUp exec brightnessctl set +5%
-bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
+bindsym --locked XF86MonBrightnessUp exec brightnessctl set +5%
+bindsym --locked XF86MonBrightnessDown exec brightnessctl set 5%-
 
 set $satty satty --filename - --fullscreen --copy-command wl-copy --initial-tool=arrow --actions-on-escape="save-to-clipboard,exit" --output-filename "$HOME/Pictures/Screenshots/satty-%Y%m%d-%H%M%S.png"
 
@@ -75,7 +81,7 @@ bindsym Mod1+p exec grim -g "$(slurp -d)" -t ppm - | $satty
 bindsym Mod1+Shift+p exec grim -g "$(slurp -d)" - | wl-copy
 
 # Lock screen
-bindsym $mod+Escape exec swaylock -f -c 000000
+bindsym $mod+Escape exec $lock
 
 input type:keyboard {
     xkb_layout us,ru
@@ -85,13 +91,17 @@ input type:keyboard {
 input type:touchpad {
     tap enabled
     natural_scroll enabled
+    dwt enabled
 }
 
 default_border none
+floating_modifier $mod normal
 
 exec --no-startup-id /usr/bin/lxqt-policykit-agent
 exec swayidle -w \
-    timeout 600 'swaylock -f -c 000000'
+    timeout 600 '$lock' \
+    before-sleep '$lock' \
+    lock '$lock'
 
 bar {
     font Liberation Sans 12
