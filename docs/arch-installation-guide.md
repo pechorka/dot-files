@@ -467,7 +467,7 @@ If the laptop has a supported fingerprint reader, run:
 ./bootstrap-fingerprint.sh
 ```
 
-This optional script installs `fprintd` and `libfprint`, confirms the current PAM include chain, and adds fingerprint auth to `TTY login` plus `swaylock` by patching `/etc/pam.d/system-login`. It deliberately leaves `sudo` password-only because terminal fingerprint prompts have a weaker user-attention model than login and lock-screen flows.
+This optional script installs `fprintd` and `libfprint`, confirms the current PAM targets, removes any older TTY-login fingerprint block from `/etc/pam.d/system-login`, and enables fingerprint as an alternative to password for both `/etc/pam.d/swaylock` and `/etc/pam.d/sudo`.
 
 After the script finishes:
 ```bash
@@ -475,7 +475,13 @@ fprintd-enroll
 fprintd-verify
 ```
 
-Then test a fresh TTY login and `swaylock` unlock before depending on fingerprint day to day.
+Then test:
+```bash
+sudo -k
+sudo true
+```
+
+And test `swaylock` unlock before depending on fingerprint day to day. If `swaylock` does not start scanning immediately, press Enter once to start PAM. TTY login remains password-only.
 
 ### 9.4 Verify Bootstrap State
 ```bash
