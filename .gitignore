@@ -32,3 +32,6 @@ fish/fish_variables
 !ghostty/**
 
 !AGENTS.md
+
+!btop
+!btop/**
