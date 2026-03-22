@@ -1,5 +1,7 @@
 #!/bin/sh
-PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/sway-status.pid"
+RUNTIME_DIR=${XDG_RUNTIME_DIR:-/tmp}
+[ -w "$RUNTIME_DIR" ] || RUNTIME_DIR=/tmp
+PIDFILE="${RUNTIME_DIR}/sway-status.pid"
 
 print_status() {
     LAYOUT=$(swaymsg -t get_inputs -r 2>/dev/null \
@@ -13,6 +15,24 @@ print_status() {
 
     MEM=$(awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}END{printf "%.0fG",(t-a)/1024/1024}' /proc/meminfo)
 
+    ROOT_INFO=$(df -hP / 2>/dev/null | awk 'NR==2{print $1 " " $4}')
+    ROOT_FS=${ROOT_INFO%% *}
+    ROOT_FREE=${ROOT_INFO#* }
+    [ "$ROOT_FREE" = "$ROOT_INFO" ] && ROOT_FREE="n/a"
+
+    case "${ROOT_FS##*/}" in
+        *p[0-9]*)
+            ROOT_LABEL=$(printf '%s' "${ROOT_FS##*/}" | sed -E 's/^.*(p[0-9]+)$/\1/')
+            ;;
+        *[0-9])
+            ROOT_LABEL="p$(printf '%s' "${ROOT_FS##*/}" | sed -E 's/^.*([0-9]+)$/\1/')"
+            ;;
+        *)
+            ROOT_LABEL="disk"
+            ;;
+    esac
+    DISK="${ROOT_LABEL} ${ROOT_FREE}"
+
     set -- /sys/class/power_supply/BAT*
     if [ -r "$1/capacity" ]; then
         CAP=$(cat "$1/capacity")
@@ -22,7 +42,7 @@ print_status() {
         BAT="ac"
     fi
 
-    printf '%s | %s | %s | %s | %s\n' "$LAYOUT" "$VOL" "$MEM" "$BAT" "$(date '+%H:%M  %Y-%m-%d')"
+    printf '%s | %s | %s | %s | %s | %s\n' "$LAYOUT" "$VOL" "$MEM" "$DISK" "$BAT" "$(date '+%H:%M  %Y-%m-%d')"
 }
 
 printf '%s\n' "$$" > "$PIDFILE"
