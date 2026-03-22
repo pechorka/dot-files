@@ -230,10 +230,11 @@ stage_2_system() {
     fi
 
     mkdir -p "$HOME/.local/share/applications"
-    for f in "$DOTFILES_DIR/applications/"*.desktop; do
-        ln -sfn "$f" "$HOME/.local/share/applications/$(basename "$f")"
+    local hidden_apps=(avahi-discover bssh bvnc htop jconsole-java-openjdk jshell-java-openjdk nvim qv4l2 qvidcap vim)
+    for app in "${hidden_apps[@]}"; do
+        printf '[Desktop Entry]\nNoDisplay=true\n' > "$HOME/.local/share/applications/$app.desktop"
     done
-    log "  Linked desktop overrides"
+    log "  Generated desktop overrides (hidden ${#hidden_apps[@]} apps from launcher)"
 
     log "Stage 2 complete."
 }
