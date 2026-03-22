@@ -45,6 +45,23 @@ install_managed_file() {
     sudo install -Dm"$mode" "$src" "$dest"
 }
 
+install_user_file() {
+    local src="$1"
+    local dest="$2"
+    local mode="${3:-644}"
+
+    if [ ! -f "$src" ]; then
+        warn "Missing managed file: $src"
+        return 1
+    fi
+
+    if [ -L "$dest" ]; then
+        rm -f "$dest"
+    fi
+
+    install -Dm"$mode" "$src" "$dest"
+}
+
 set_snapper_value() {
     local key="$1"
     local value="$2"
@@ -189,6 +206,11 @@ stage_1_packages() {
 
         # System applets
         networkmanager
+        cups
+        system-config-printer
+        avahi
+        nss-mdns
+        ipp-usb
         blueman
         pavucontrol
         lxqt-policykit 
@@ -338,6 +360,11 @@ stage_3_shell() {
         warn "fish not found — skipping shell change."
     fi
 
+    if [ -f "$DOTFILES_DIR/git/gitconfig" ]; then
+        install_user_file "$DOTFILES_DIR/git/gitconfig" "$HOME/.gitconfig"
+        log "  Installed ~/.gitconfig"
+    fi
+
     log "Stage 3 complete."
 }
 
@@ -359,6 +386,8 @@ stage_4_services() {
     local services=(
         systemd-resolved
         NetworkManager
+        cups.service
+        avahi-daemon.service
         bluetooth.service
         snapper-cleanup.timer
         tlp.service

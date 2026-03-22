@@ -211,7 +211,7 @@ Breakdown:
 - `btrfs-progs` — btrfs filesystem tools
 - `networkmanager` — networking (WiFi + wired)
 - `sudo` — for non-root user
-- `vim` — editor for post-install config (minimal, available before Nix)
+- `vim` — editor for post-install config (minimal, available before bootstrap)
 - `git` — needed to clone dotfiles after first boot
 - `snapper` — automatic btrfs snapshot management (pre-update rollback)
 
@@ -287,7 +287,7 @@ EDITOR=vim visudo
 ```
 Uncomment the line: `%wheel ALL=(ALL:ALL) ALL`
 
-Note: the shell is bash for now — fish will come from Nix later and you'll change the default shell after bootstrap.
+Note: the shell is bash for now — fish will be installed later and you'll change the default shell after bootstrap.
 
 ### 6.7 Snapper
 Snapper configuration (config creation, snapshot subvolume fixup, limits, and snap-pac installation) is handled by `bootstrap.sh`. The bootstrap keeps `snapper-cleanup.timer` enabled, disables timeline snapshots, and caps retained `number` / `important` snapshots at `3` each.
@@ -446,20 +446,20 @@ nmcli device wifi connect "YourNetworkName" password "YourPassword"
 
 ## Phase 9 — Post-Install (Before Bootstrap)
 
-At this point you have a minimal Arch system with bash, vim, git, snapper, and internet. The next step is to clone your dotfiles and run bootstrap.sh, which handles everything else (Sway, Nix, Ghostty, Incus, the `vm` CLI, zram setup, etc.) as described in the requirements document.
+At this point you have a minimal Arch system with bash, vim, git, snapper, and internet. The next step is to clone this repo into `~/.config` and run `bootstrap.sh`, which handles the managed workstation setup from there.
 
 ### 9.1 Clone Dotfiles
 ```bash
-git clone https://github.com/your-username/dotfiles.git ~/dotfiles
+git clone https://github.com/your-username/dotfiles.git ~/.config
 ```
 
 ### 9.2 Run Bootstrap
 ```bash
-cd ~/dotfiles
+cd ~/.config
 ./bootstrap.sh
 ```
 
-This script installs the managed `zram-generator` and `systemd-boot` config files, applies the Snapper cleanup-only policy, enables the core workstation services, disables `NetworkManager-wait-online.service` plus `snapper-timeline.timer`, installs `tlp`, applies a managed laptop power policy from `/etc/tlp.d/10-laptop-power.conf`, disables `power-profiles-daemon.service` if present, and restores the Lenovo battery thresholds to `40/80`. After it completes, reboot into your fully configured Sway environment.
+This script installs the core workstation packages and configs (including Sway, Ghostty, printing support, and the managed global Git config), applies the Snapper cleanup-only policy, installs the managed `zram-generator` and `systemd-boot` config files, enables the core workstation services, disables `NetworkManager-wait-online.service` plus `snapper-timeline.timer`, installs `tlp`, applies a managed laptop power policy from `/etc/tlp.d/10-laptop-power.conf`, disables `power-profiles-daemon.service` if present, and restores the Lenovo battery thresholds to `40/80`. After it completes, reboot into your fully configured Sway environment.
 
 ### 9.3 Optional Fingerprint Setup
 If the laptop has a supported fingerprint reader, run:
@@ -487,7 +487,7 @@ And test `swaylock` unlock before depending on fingerprint day to day. If `swayl
 ```bash
 zramctl
 cat /proc/swaps
-systemctl list-unit-files --state=enabled | rg 'NetworkManager|systemd-resolved|snapper|tlp'
+systemctl list-unit-files --state=enabled | rg 'NetworkManager|systemd-resolved|cups|avahi|snapper|tlp'
 systemctl is-enabled NetworkManager-wait-online.service snapper-timeline.timer power-profiles-daemon.service 2>/dev/null || true
 sudo tlp-stat -c | rg 'START_CHARGE_THRESH_BAT0|STOP_CHARGE_THRESH_BAT0|CPU_ENERGY_PERF_POLICY|PLATFORM_PROFILE'
 cat /sys/class/power_supply/BAT0/charge_control_start_threshold
@@ -497,7 +497,7 @@ systemd-analyze
 
 Expected results:
 - `zram0` exists and appears in `/proc/swaps`
-- `NetworkManager.service`, `systemd-resolved.service`, `snapper-cleanup.timer`, and `tlp.service` are enabled
+- `NetworkManager.service`, `systemd-resolved.service`, `cups.service`, `avahi-daemon.service`, `snapper-cleanup.timer`, and `tlp.service` are enabled
 - `NetworkManager-wait-online.service` and `snapper-timeline.timer` are not enabled
 - `power-profiles-daemon.service` is disabled or absent
 - `tlp-stat -c` shows `START_CHARGE_THRESH_BAT0=40`, `STOP_CHARGE_THRESH_BAT0=80`, `CPU_ENERGY_PERF_POLICY_ON_AC=balance_performance`, `CPU_ENERGY_PERF_POLICY_ON_BAT=balance_power`, `PLATFORM_PROFILE_ON_AC=performance`, and `PLATFORM_PROFILE_ON_BAT=balanced`
@@ -563,9 +563,7 @@ No swap partition — zram configured via bootstrap.sh (compressed swap in RAM, 
 | Subvolume | Mount Point | Purpose |
 |-----------|-------------|---------|
 | @ | / | Root filesystem |
-| @home | /home | User data (dotfiles, vm metadata, project secrets) |
-| @var | /var | Variable data (logs, caches, Incus VM storage) |
-| @nix | /nix | Nix store — excluded from root snapshots (large, fully reproducible) |
+| @home | /home | User data (dotfiles, project checkouts, project secrets) |
+| @var | /var | Variable data (logs, caches) |
+| @nix | /nix | Reserved extra subvolume kept separate from root snapshots for future tooling |
 | @snapshots | /.snapshots | Snapper snapshots for rollback |
-
-Incus will create its own btrfs storage pool for VMs within this filesystem.

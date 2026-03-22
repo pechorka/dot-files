@@ -1,0 +1,18 @@
+[init]
+	defaultBranch = master
+[user]
+	name = pechorka
+	email = pechor44@gmail.com
+[includeIf "gitdir:~/positive/"]
+    path = ~/positive/.gitconfig
+[includeIf "gitdir:~/hollandAndBarret/"]
+    path = ~/hollandAndBarret/.gitconfig
+[url "git@github.com:"]
+	insteadOf = https://github.com/
+[url "git@gitlab.com:"]
+	insteadOf = https://gitlab.com/
+[pull]
+	rebase = true
+[core]
+	autocrlf = input
+	fileMode = false
