@@ -240,6 +240,9 @@ EOF
 stage_1_packages() {
     log "Stage 1 — Installing packages via pacman..."
 
+    log "Refreshing package databases and upgrading the base system..."
+    as_root pacman -Syyu --noconfirm
+
     # Resolve iptables conflict (needed by some packages)
     if pacman -Qi iptables &>/dev/null && ! pacman -Qi iptables-nft &>/dev/null; then
         log "Replacing iptables with iptables-nft..."
@@ -261,6 +264,7 @@ stage_1_packages() {
         # Audio
         pipewire
         pipewire-pulse
+        pipewire-jack
         sof-firmware
         wireplumber
 
@@ -322,6 +326,7 @@ stage_1_packages() {
         pgcli
 
         # Containers
+        crun
         podman
 
         # Virtual machines (quickemu / qemu extras)
