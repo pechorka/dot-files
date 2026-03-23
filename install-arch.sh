@@ -53,7 +53,24 @@ cleanup_temp_artifacts() {
     fi
 }
 
-trap cleanup_temp_artifacts EXIT
+cleanup_on_exit() {
+    local exit_code=$?
+
+    set +e
+    cleanup_temp_artifacts
+
+    if [ "$exit_code" -ne 0 ]; then
+        warn "Installer exited early. Attempting to clean up mounts..."
+        cleanup_recovery_bind_mounts
+
+        if mountpoint -q "$MNT"; then
+            umount -R "$MNT" 2>/dev/null || umount -Rl "$MNT" 2>/dev/null || \
+                warn "Automatic cleanup could not fully unmount $MNT. Run: umount -Rl $MNT"
+        fi
+    fi
+}
+
+trap cleanup_on_exit EXIT
 
 require_command() {
     local cmd="$1"
