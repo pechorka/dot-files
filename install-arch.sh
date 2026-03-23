@@ -453,10 +453,17 @@ install_alpine_recovery() {
         mount --bind /run "$MNT/recovery/run"
 
         cp /etc/resolv.conf "$MNT/recovery/etc/resolv.conf"
-        chroot "$MNT/recovery" /bin/sh -ec 'apk update && apk add btrfs-progs vim e2fsprogs dosfstools util-linux linux-lts'
+        chroot "$MNT/recovery" /bin/sh -ec '
+            export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+            /sbin/apk update
+            /sbin/apk add btrfs-progs vim e2fsprogs dosfstools util-linux linux-lts
+        '
 
         log "Set the root password for Alpine recovery."
-        chroot "$MNT/recovery" /bin/sh -c 'passwd root'
+        chroot "$MNT/recovery" /bin/sh -ec '
+            export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+            passwd root
+        '
     )
 
     mkdir -p "$MNT/boot/alpine"
