@@ -20,10 +20,12 @@ cursor-style-blink = false
 
 # Window (Sway)
 window-decoration = false
-confirm-close-surface = false
+confirm-close-surface = true
 
 # URLs
 link-url = true
 
 #init state
 window-inherit-working-directory = false
+tab-inherit-working-directory = true
+split-inherit-working-directory = true
