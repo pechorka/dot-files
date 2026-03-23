@@ -3,6 +3,37 @@
 ## Context
 This documents the installation of Arch Linux on a laptop (i7-1365U, 32GB RAM, fresh 2TB SSD) as the foundation for the developer PC architecture described in the companion requirements document. The root filesystem will be btrfs with zstd compression. Includes an Alpine Linux recovery partition for rollback without a USB drive.
 
+## Recommended Path — Automated Install
+
+After booting the Arch ISO and connecting to the internet, clone this repo and run the installer:
+
+```bash
+git clone https://github.com/your-username/dotfiles.git ~/.config
+cd ~/.config
+./install-arch.sh
+```
+
+The installer prompts for:
+- target disk
+- hostname
+- username
+- timezone
+- Arch root password
+- Arch user password
+- Alpine recovery root password
+
+It automates:
+- disk partitioning and formatting
+- the btrfs subvolume layout
+- `pacstrap`, `fstab`, locale, timezone, hostname, user creation, and `systemd-boot`
+- Alpine recovery installation and `recovery.conf`
+- copying this repo into the target user's `~/.config`
+- running `bootstrap.sh` in `arch-chroot` context so the first boot already includes the workstation setup
+
+When it finishes, remove the USB drive and reboot into Arch.
+
+The remaining sections below are the manual fallback/debug path. If you use `./install-arch.sh`, skip directly to the optional fingerprint setup and post-install verification after first login.
+
 ---
 
 ## Phase 1 — Create Bootable USB (Windows)
@@ -444,9 +475,11 @@ nmcli device wifi connect "YourNetworkName" password "YourPassword"
 
 ---
 
-## Phase 9 — Post-Install (Before Bootstrap)
+## Phase 9 — Post-Install (Manual Path Only)
 
-At this point you have a minimal Arch system with bash, vim, git, snapper, and internet. The next step is to clone this repo into `~/.config` and run `bootstrap.sh`, which handles the managed workstation setup from there.
+If you used `./install-arch.sh`, this phase is already done for you. The repo has already been copied into the target user's `~/.config`, and `bootstrap.sh` has already been run from `arch-chroot`.
+
+If you followed the manual path above, at this point you have a minimal Arch system with bash, vim, git, snapper, and internet. The next step is to clone this repo into `~/.config` and run `bootstrap.sh`, which handles the managed workstation setup from there.
 
 ### 9.1 Clone Dotfiles
 ```bash

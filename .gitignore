@@ -15,6 +15,7 @@ fish/fish_variables
 
 !bootstrap.sh
 !bootstrap-fingerprint.sh
+!install-arch.sh
 
 !system
 !system/**
