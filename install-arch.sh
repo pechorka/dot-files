@@ -135,6 +135,7 @@ preflight_checks() {
         partprobe
         sfdisk
         tar
+        tee
         udevadm
         umount
         wipefs
@@ -269,6 +270,17 @@ install_arch_base() {
     genfstab -U "$MNT" > "$MNT/etc/fstab"
 }
 
+seed_target_resolver() {
+    log "Copying live environment resolver config into the target system..."
+    install -Dm644 /etc/resolv.conf "$MNT/etc/resolv.conf"
+}
+
+configure_installed_resolver() {
+    log "Configuring systemd-resolved for the installed system..."
+    rm -f "$MNT/etc/resolv.conf"
+    ln -s /run/systemd/resolve/stub-resolv.conf "$MNT/etc/resolv.conf"
+}
+
 configure_arch_system() {
     log "Configuring the installed Arch system..."
 
@@ -298,6 +310,11 @@ locale-gen
 
 printf 'LANG=en_US.UTF-8\n' > /etc/locale.conf
 printf '%s\n' "$TARGET_HOSTNAME" > /etc/hostname
+cat > /etc/hosts <<HOSTS
+127.0.0.1 localhost
+::1 localhost
+127.0.1.1 $TARGET_HOSTNAME.localdomain $TARGET_HOSTNAME
+HOSTS
 
 if ! id "$TARGET_USER" >/dev/null 2>&1; then
     useradd -m -G wheel -s /bin/bash "$TARGET_USER"
@@ -310,6 +327,8 @@ SUDOERS
 chmod 440 /etc/sudoers.d/10-wheel
 
 bootctl install
+systemctl enable NetworkManager
+systemctl enable systemd-resolved
 EOF
 }
 
@@ -360,9 +379,12 @@ remove_temporary_bootstrap_sudoers() {
 run_bootstrap_in_chroot() {
     log "Running bootstrap inside arch-chroot..."
 
+    mkdir -p "$MNT/var/log/install-arch"
     install_temporary_bootstrap_sudoers
-    arch-chroot "$MNT" /bin/bash -lc "cd /home/$INSTALL_USER/.config && ./bootstrap.sh --context arch-chroot --target-user $INSTALL_USER"
+    arch-chroot "$MNT" /bin/bash -lc "cd /home/$INSTALL_USER/.config && ./bootstrap.sh --context arch-chroot --target-user $INSTALL_USER" \
+        2>&1 | tee "$MNT/var/log/install-arch/bootstrap.log"
     remove_temporary_bootstrap_sudoers
+    date -Iseconds > "$MNT/var/log/install-arch/bootstrap.completed"
 }
 
 find_latest_alpine_minrootfs() {
@@ -445,12 +467,14 @@ main() {
     partition_disk
     format_and_mount_filesystems
     install_arch_base
+    seed_target_resolver
     configure_arch_system
     set_arch_passwords
     copy_repo_into_target
     write_arch_boot_entry
     install_alpine_recovery
     run_bootstrap_in_chroot
+    configure_installed_resolver
     finalize_install
 }
 
