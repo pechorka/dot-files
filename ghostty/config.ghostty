@@ -24,3 +24,6 @@ confirm-close-surface = false
 
 # URLs
 link-url = true
+
+#init state
+window-inherit-working-directory = false
