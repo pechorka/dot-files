@@ -193,6 +193,16 @@ stage_1_packages() {
         # Containers
         podman
 
+        # Virtual machines (quickemu / qemu extras)
+        qemu-ui-gtk
+        qemu-chardev-spice
+        qemu-audio-pipewire
+        qemu-hw-display-virtio-vga
+        qemu-ui-spice-core
+        spice-gtk
+        qemu-hw-display-virtio-gpu
+        qemu-hw-usb-redirect
+
         # Wayland desktop tools
         wofi
         mako
