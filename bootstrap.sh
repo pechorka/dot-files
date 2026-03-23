@@ -150,6 +150,23 @@ install_target_user_file() {
     as_root install -o "$TARGET_USER" -g "$TARGET_GROUP" -Dm"$mode" "$src" "$dest"
 }
 
+set_config_value() {
+    local file="$1"
+    local key="$2"
+    local value="$3"
+
+    if [ ! -f "$file" ]; then
+        warn "Config file not found: $file"
+        return 1
+    fi
+
+    if grep -Eq "^[#[:space:]]*${key}=" "$file"; then
+        as_root sed -Ei "s|^[#[:space:]]*${key}=.*|${key}=${value}|" "$file"
+    else
+        printf '%s=%s\n' "$key" "$value" | as_root tee -a "$file" >/dev/null
+    fi
+}
+
 set_snapper_value() {
     local key="$1"
     local value="$2"
@@ -164,9 +181,72 @@ configure_snapper_policy() {
     fi
 
     set_snapper_value TIMELINE_CREATE no
-    set_snapper_value NUMBER_LIMIT 3
-    set_snapper_value NUMBER_LIMIT_IMPORTANT 3
+    set_snapper_value NUMBER_LIMIT 6
+    set_snapper_value NUMBER_LIMIT_IMPORTANT 6
     log "Applied Snapper cleanup-only retention policy"
+}
+
+ensure_mkinitcpio_hook() {
+    local hook="$1"
+
+    if [ ! -f /etc/mkinitcpio.conf ]; then
+        warn "mkinitcpio config not found — skipping hook update"
+        return
+    fi
+
+    if grep -Eq "^[[:space:]]*HOOKS=\(.*[[:space:]]${hook}([[:space:]]|\)).*" /etc/mkinitcpio.conf; then
+        log "  mkinitcpio hook already present: $hook"
+        return
+    fi
+
+    as_root sed -Ei "/^[[:space:]]*HOOKS=\(/ s/\)$/ ${hook})/" /etc/mkinitcpio.conf
+    log "  Added mkinitcpio hook: $hook"
+}
+
+configure_grub_defaults() {
+    if [ ! -f /etc/default/grub ]; then
+        warn "GRUB defaults not found — skipping GRUB configuration"
+        return
+    fi
+
+    set_config_value /etc/default/grub GRUB_TIMEOUT 5
+    set_config_value /etc/default/grub GRUB_TIMEOUT_STYLE menu
+    set_config_value /etc/default/grub GRUB_DISABLE_SUBMENU y
+    log "Applied GRUB defaults for snapshot-friendly boot menu"
+}
+
+install_or_refresh_grub() {
+    if ! command -v grub-install &>/dev/null; then
+        warn "grub-install not available — skipping GRUB installation"
+        return
+    fi
+
+    if ! mountpoint -q /boot; then
+        warn "/boot is not mounted — skipping GRUB installation"
+        return
+    fi
+
+    if is_chroot_context; then
+        log "  Skipping grub-install in arch-chroot context"
+        return
+    fi
+
+    as_root grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB >/dev/null
+    log "  Installed or refreshed GRUB in the EFI partition"
+}
+
+refresh_boot_artifacts() {
+    if [ -f /etc/mkinitcpio.conf ]; then
+        as_root mkinitcpio -P >/dev/null
+        log "  Regenerated initramfs images"
+    fi
+
+    if command -v grub-mkconfig &>/dev/null && mountpoint -q /boot; then
+        as_root grub-mkconfig -o /boot/grub/grub.cfg >/dev/null
+        log "  Regenerated GRUB menu"
+    else
+        warn "  Could not regenerate GRUB menu"
+    fi
 }
 
 enable_system_service() {
@@ -284,6 +364,10 @@ stage_1_packages() {
         tlp
 
         # Snapshot management
+        grub
+        grub-btrfs
+        efibootmgr
+        inotify-tools
         snapper
         snap-pac
 
@@ -448,15 +532,15 @@ stage_2_system() {
         log "  Installed zram-generator config"
     fi
 
-    if [ -f "$DOTFILES_DIR/system/loader.conf" ]; then
-        install_managed_file "$DOTFILES_DIR/system/loader.conf" /boot/loader/loader.conf
-        log "  Installed systemd-boot loader config"
-    fi
-
     if [ -f "$DOTFILES_DIR/system/tlp.d/10-laptop-power.conf" ]; then
         install_managed_file "$DOTFILES_DIR/system/tlp.d/10-laptop-power.conf" /etc/tlp.d/10-laptop-power.conf
         log "  Installed TLP power policy"
     fi
+
+    ensure_mkinitcpio_hook grub-btrfs-overlayfs
+    configure_grub_defaults
+    install_or_refresh_grub
+    refresh_boot_artifacts
 
     if is_chroot_context; then
         log "  Skipping live service activation in arch-chroot context"
@@ -536,6 +620,7 @@ stage_4_services() {
         cups.service
         avahi-daemon.service
         bluetooth.service
+        grub-btrfsd.service
         snapper-cleanup.timer
         tlp.service
     )
@@ -604,7 +689,8 @@ main() {
         log "Next steps:"
         log "  1. Log out and back in (for fish shell)"
         log "  2. Start Sway from TTY: sway"
-        log "  3. Optional: run ./bootstrap-fingerprint.sh for swaylock + sudo fingerprint auth"
+        log "  3. Use GRUB snapshot entries for rescue boots and snapper rollback to make one permanent"
+        log "  4. Optional: run ./bootstrap-fingerprint.sh for swaylock + sudo fingerprint auth"
     fi
 }
 

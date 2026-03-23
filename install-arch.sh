@@ -2,36 +2,23 @@
 set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MNT="/mnt"
+MNT="/mnt/archinstall"
 
 EFI_PART_TYPE="C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 LINUX_PART_TYPE="0FC63DAF-8483-4772-8E79-3D69D8477DE4"
-ALPINE_RELEASES_URL="https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/"
 
 INSTALL_DISK=""
 INSTALL_HOSTNAME=""
 INSTALL_USER=""
 INSTALL_TIMEZONE=""
+INSTALL_ROOT_PASSWORD=""
+INSTALL_USER_PASSWORD=""
 
 EFI_PART=""
-RECOVERY_PART=""
 ROOT_PART=""
 
-ALPINE_ARCHIVE=""
-TEMP_SUDOERS_PATH=""
-
-BASE_PACKAGES=(
-    base
-    linux
-    linux-firmware
-    intel-ucode
-    btrfs-progs
-    networkmanager
-    sudo
-    vim
-    git
-    snapper
-)
+TEMP_CONFIG_PATH=""
+TEMP_CREDS_PATH=""
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -44,12 +31,19 @@ error() { echo -e "${RED}[install-arch]${NC} $1" >&2; }
 die() { error "$1"; exit 1; }
 
 cleanup_temp_artifacts() {
-    if [ -n "$TEMP_SUDOERS_PATH" ] && [ -e "$TEMP_SUDOERS_PATH" ]; then
-        rm -f "$TEMP_SUDOERS_PATH"
+    if [ -n "$TEMP_CONFIG_PATH" ] && [ -f "$TEMP_CONFIG_PATH" ]; then
+        rm -f "$TEMP_CONFIG_PATH"
     fi
 
-    if [ -n "$ALPINE_ARCHIVE" ] && [ -f "$ALPINE_ARCHIVE" ]; then
-        rm -f "$ALPINE_ARCHIVE"
+    if [ -n "$TEMP_CREDS_PATH" ] && [ -f "$TEMP_CREDS_PATH" ]; then
+        rm -f "$TEMP_CREDS_PATH"
+    fi
+}
+
+cleanup_target_mounts() {
+    if mountpoint -q "$MNT"; then
+        umount -R "$MNT" 2>/dev/null || umount -Rl "$MNT" 2>/dev/null || \
+            warn "Automatic cleanup could not fully unmount $MNT. Run: umount -Rl $MNT"
     fi
 }
 
@@ -61,12 +55,7 @@ cleanup_on_exit() {
 
     if [ "$exit_code" -ne 0 ]; then
         warn "Installer exited early. Attempting to clean up mounts..."
-        cleanup_recovery_bind_mounts
-
-        if mountpoint -q "$MNT"; then
-            umount -R "$MNT" 2>/dev/null || umount -Rl "$MNT" 2>/dev/null || \
-                warn "Automatic cleanup could not fully unmount $MNT. Run: umount -Rl $MNT"
-        fi
+        cleanup_target_mounts
     fi
 }
 
@@ -104,6 +93,11 @@ wait_for_block_device() {
     die "Timed out waiting for block device: $path"
 }
 
+subvolume_id() {
+    local path="$1"
+    btrfs subvolume show "$path" | awk -F': *' '/^Subvolume ID:/ {print $2; exit}'
+}
+
 validate_username() {
     [[ "$1" =~ ^[a-z_][a-z0-9_-]*$ ]]
 }
@@ -129,6 +123,15 @@ validate_target_disk() {
     return 0
 }
 
+ensure_archinstall_present() {
+    if command -v archinstall >/dev/null 2>&1; then
+        return 0
+    fi
+
+    log "archinstall not found in the live environment. Installing it..."
+    pacman -Sy --noconfirm archlinux-keyring archinstall
+}
+
 preflight_checks() {
     [ "${EUID:-$(id -u)}" -eq 0 ] || die "Run this script as root from the Arch live environment."
     [ -d /sys/firmware/efi ] || die "UEFI mode is required."
@@ -136,27 +139,24 @@ preflight_checks() {
 
     local required_commands=(
         arch-chroot
-        blkid
+        blockdev
         btrfs
-        chroot
         curl
-        genfstab
         lsblk
         mkfs.btrfs
-        mkfs.ext4
         mkfs.fat
         mount
         mountpoint
-        pacman-key
-        pacstrap
+        openssl
         partprobe
+        python
         sfdisk
-        tar
-        tee
         udevadm
         umount
         wipefs
     )
+
+    ensure_archinstall_present
 
     for cmd in "${required_commands[@]}"; do
         require_command "$cmd"
@@ -169,6 +169,33 @@ preflight_checks() {
     if ! curl -fsI https://archlinux.org/ >/dev/null; then
         die "Internet connectivity is required. Connect to the network and retry."
     fi
+}
+
+prompt_for_password() {
+    local var_name="$1"
+    local label="$2"
+    local first=""
+    local second=""
+
+    while :; do
+        read -r -s -p "$label: " first
+        echo
+        [ -n "$first" ] || {
+            warn "Password cannot be empty."
+            continue
+        }
+
+        read -r -s -p "Confirm $label: " second
+        echo
+
+        if [ "$first" != "$second" ]; then
+            warn "Passwords do not match."
+            continue
+        fi
+
+        printf -v "$var_name" '%s' "$first"
+        return 0
+    done
 }
 
 prompt_for_inputs() {
@@ -210,6 +237,9 @@ prompt_for_inputs() {
         validate_timezone "$INSTALL_TIMEZONE" && break
         warn "That timezone does not exist in /usr/share/zoneinfo."
     done
+
+    prompt_for_password INSTALL_ROOT_PASSWORD "Root password"
+    prompt_for_password INSTALL_USER_PASSWORD "Password for $INSTALL_USER"
 }
 
 confirm_destructive_action() {
@@ -219,7 +249,8 @@ confirm_destructive_action() {
     log "  Hostname: $INSTALL_HOSTNAME"
     log "  Username: $INSTALL_USER"
     log "  Timezone: $INSTALL_TIMEZONE"
-    log "  Layout: EFI 1G, Recovery 2G (Alpine), root btrfs (remaining)"
+    log "  Layout: EFI 1G, root btrfs (remaining)"
+
     echo
     warn "This will wipe every partition on $INSTALL_DISK."
 
@@ -237,7 +268,6 @@ partition_disk() {
 label: gpt
 
 size=1GiB,type=$EFI_PART_TYPE,name="EFI System"
-size=2GiB,type=$LINUX_PART_TYPE,name="Recovery"
 type=$LINUX_PART_TYPE,name="Arch Linux"
 EOF
 
@@ -245,19 +275,26 @@ EOF
     udevadm settle
 
     EFI_PART="$(partition_path "$INSTALL_DISK" 1)"
-    RECOVERY_PART="$(partition_path "$INSTALL_DISK" 2)"
-    ROOT_PART="$(partition_path "$INSTALL_DISK" 3)"
+    ROOT_PART="$(partition_path "$INSTALL_DISK" 2)"
 
     wait_for_block_device "$EFI_PART"
-    wait_for_block_device "$RECOVERY_PART"
     wait_for_block_device "$ROOT_PART"
+}
+
+mount_btrfs_layout() {
+    mount -o compress=zstd,noatime "$ROOT_PART" "$MNT"
+    mkdir -p "$MNT"/{home,var,nix,.snapshots,boot}
+    mount -o subvol=@home,compress=zstd,noatime "$ROOT_PART" "$MNT/home"
+    mount -o subvol=@var,compress=zstd,noatime "$ROOT_PART" "$MNT/var"
+    mount -o subvol=@nix,compress=zstd,noatime "$ROOT_PART" "$MNT/nix"
+    mount -o subvol=@snapshots,compress=zstd,noatime "$ROOT_PART" "$MNT/.snapshots"
+    mount "$EFI_PART" "$MNT/boot"
 }
 
 format_and_mount_filesystems() {
     log "Formatting target filesystems..."
 
-    mkfs.fat -F 32 "$EFI_PART"
-    mkfs.ext4 -L recovery "$RECOVERY_PART"
+    mkfs.fat -F 32 -n EFI "$EFI_PART"
     mkfs.btrfs -f -L arch "$ROOT_PART"
 
     mount "$ROOT_PART" "$MNT"
@@ -266,51 +303,125 @@ format_and_mount_filesystems() {
     btrfs subvolume create "$MNT/@var"
     btrfs subvolume create "$MNT/@nix"
     btrfs subvolume create "$MNT/@snapshots"
+
+    local root_subvol_id
+    root_subvol_id="$(subvolume_id "$MNT/@")"
+    [ -n "$root_subvol_id" ] || die "Could not determine the initial root subvolume ID."
+    btrfs subvolume set-default "$root_subvol_id" "$MNT"
     umount "$MNT"
 
-    mount -o subvol=@,compress=zstd,noatime "$ROOT_PART" "$MNT"
-    mkdir -p "$MNT"/{home,var,nix,.snapshots,boot,recovery}
-    mount -o subvol=@home,compress=zstd,noatime "$ROOT_PART" "$MNT/home"
-    mount -o subvol=@var,compress=zstd,noatime "$ROOT_PART" "$MNT/var"
-    mount -o subvol=@nix,compress=zstd,noatime "$ROOT_PART" "$MNT/nix"
-    mount -o subvol=@snapshots,compress=zstd,noatime "$ROOT_PART" "$MNT/.snapshots"
-    mount "$EFI_PART" "$MNT/boot"
-    mount "$RECOVERY_PART" "$MNT/recovery"
+    mount_btrfs_layout
 }
 
-install_arch_base() {
-    log "Installing Arch base system..."
+ensure_target_mounted() {
+    if mountpoint -q "$MNT"; then
+        return 0
+    fi
 
-    pacman-key --init
-    pacman-key --populate archlinux
-    pacstrap -K "$MNT" "${BASE_PACKAGES[@]}"
-    genfstab -U "$MNT" > "$MNT/etc/fstab"
+    mkdir -p "$MNT"
+    mount_btrfs_layout
 }
 
-seed_target_resolver() {
-    log "Copying live environment resolver config into the target system..."
-    install -Dm644 /etc/resolv.conf "$MNT/etc/resolv.conf"
+write_archinstall_inputs() {
+    log "Generating archinstall config..."
+
+    TEMP_CONFIG_PATH="$(mktemp /tmp/install-arch.config.XXXXXX.json)"
+    TEMP_CREDS_PATH="$(mktemp /tmp/install-arch.creds.XXXXXX.json)"
+
+    local user_password_hash
+    user_password_hash="$(openssl passwd -6 "$INSTALL_USER_PASSWORD")"
+
+    export TEMP_CONFIG_PATH
+    export TEMP_CREDS_PATH
+    export INSTALL_HOSTNAME
+    export INSTALL_TIMEZONE
+    export INSTALL_USER
+    export INSTALL_ROOT_PASSWORD
+    export INSTALL_USER_PASSWORD_HASH="$user_password_hash"
+    export MNT
+
+    python <<'PY'
+import json
+import os
+from pathlib import Path
+
+config = {
+    "additional-repositories": [],
+    "archinstall-language": "English",
+    "audio_config": None,
+    "bootloader_config": {
+        "bootloader": "grub",
+        "uki": False,
+        "removable": False,
+    },
+    "bootloader": "grub",
+    "debug": False,
+    "disk_config": {
+        "config_type": "pre_mounted_config",
+        "mountpoint": os.environ["MNT"],
+    },
+    "hostname": os.environ["INSTALL_HOSTNAME"],
+    "kernels": ["linux"],
+    "locale_config": {
+        "kb_layout": "us",
+        "sys_enc": "UTF-8",
+        "sys_lang": "en_US",
+    },
+    "mirror_config": {},
+    "network_config": {},
+    "no_pkg_lookups": False,
+    "ntp": True,
+    "offline": False,
+    "packages": [
+        "btrfs-progs",
+        "efibootmgr",
+        "git",
+        "grub",
+        "intel-ucode",
+        "linux-firmware",
+        "networkmanager",
+        "sudo",
+        "vim",
+    ],
+    "parallel downloads": 0,
+    "profile_config": None,
+    "save_config": None,
+    "script": "guided",
+    "silent": True,
+    "swap": False,
+    "timezone": os.environ["INSTALL_TIMEZONE"],
+    "version": "2.6.0",
 }
 
-configure_installed_resolver() {
-    log "Configuring systemd-resolved for the installed system..."
-    rm -f "$MNT/etc/resolv.conf"
-    ln -s /run/systemd/resolve/stub-resolv.conf "$MNT/etc/resolv.conf"
+creds = {
+    "root_enc_password": os.environ["INSTALL_ROOT_PASSWORD"],
+    "users": {
+        "username": os.environ["INSTALL_USER"],
+        "enc_password": os.environ["INSTALL_USER_PASSWORD_HASH"],
+        "sudo": True,
+    },
 }
 
-configure_arch_system() {
-    log "Configuring the installed Arch system..."
+Path(os.environ["TEMP_CONFIG_PATH"]).write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+Path(os.environ["TEMP_CREDS_PATH"]).write_text(json.dumps(creds, indent=2) + "\n", encoding="utf-8")
+PY
+}
 
-    arch-chroot "$MNT" /usr/bin/env \
-        TARGET_HOSTNAME="$INSTALL_HOSTNAME" \
-        TARGET_USER="$INSTALL_USER" \
-        TARGET_TIMEZONE="$INSTALL_TIMEZONE" \
-        /bin/bash -se <<'EOF'
+run_archinstall() {
+    log "Handing the mounted layout to archinstall..."
+    archinstall --config "$TEMP_CONFIG_PATH" --creds "$TEMP_CREDS_PATH"
+}
+
+post_install_system_tweaks() {
+    log "Applying post-install system tweaks..."
+
+    ensure_target_mounted
+
+    arch-chroot "$MNT" /bin/bash -se <<'EOF'
 set -euo pipefail
 
-ensure_locale_enabled() {
+enable_locale() {
     local locale="$1"
-
     if grep -qx "#$locale" /etc/locale.gen; then
         sed -i "s/^#$locale$/$locale/" /etc/locale.gen
     elif ! grep -qx "$locale" /etc/locale.gen; then
@@ -318,24 +429,8 @@ ensure_locale_enabled() {
     fi
 }
 
-ln -sf "/usr/share/zoneinfo/$TARGET_TIMEZONE" /etc/localtime
-hwclock --systohc
-
-ensure_locale_enabled "en_US.UTF-8 UTF-8"
-ensure_locale_enabled "ru_RU.UTF-8 UTF-8"
+enable_locale "ru_RU.UTF-8 UTF-8"
 locale-gen
-
-printf 'LANG=en_US.UTF-8\n' > /etc/locale.conf
-printf '%s\n' "$TARGET_HOSTNAME" > /etc/hostname
-cat > /etc/hosts <<HOSTS
-127.0.0.1 localhost
-::1 localhost
-127.0.1.1 $TARGET_HOSTNAME.localdomain $TARGET_HOSTNAME
-HOSTS
-
-if ! id "$TARGET_USER" >/dev/null 2>&1; then
-    useradd -m -G wheel -s /bin/bash "$TARGET_USER"
-fi
 
 install -d -m 750 /etc/sudoers.d
 cat > /etc/sudoers.d/10-wheel <<'SUDOERS'
@@ -343,145 +438,37 @@ cat > /etc/sudoers.d/10-wheel <<'SUDOERS'
 SUDOERS
 chmod 440 /etc/sudoers.d/10-wheel
 
-bootctl install
-systemctl enable NetworkManager
-systemctl enable systemd-resolved
+# Keep root mounted via the btrfs default subvolume so snapper rollback works natively.
+awk '
+BEGIN { OFS="\t" }
+$0 ~ /^[[:space:]]*#/ || NF == 0 { print; next }
+$2 == "/" && $3 == "btrfs" {
+    n = split($4, opts, ",")
+    filtered = ""
+    for (i = 1; i <= n; i++) {
+        if (opts[i] ~ /^subvol=/ || opts[i] ~ /^subvolid=/) {
+            continue
+        }
+        filtered = filtered (filtered ? "," : "") opts[i]
+    }
+    $4 = filtered
+}
+{ print }
+' /etc/fstab > /etc/fstab.snapper-native
+mv /etc/fstab.snapper-native /etc/fstab
+
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+systemctl enable NetworkManager NetworkManager-wait-online systemd-resolved
 EOF
-}
-
-set_arch_passwords() {
-    log "Set the root password for the new Arch install."
-    arch-chroot "$MNT" passwd root
-
-    log "Set the password for $INSTALL_USER."
-    arch-chroot "$MNT" passwd "$INSTALL_USER"
-}
-
-copy_repo_into_target() {
-    local target_repo="$MNT/home/$INSTALL_USER/.config"
-
-    log "Copying this repo into the new system..."
-    rm -rf "$target_repo"
-    cp -aT "$DOTFILES_DIR" "$target_repo"
-    arch-chroot "$MNT" chown -R "$INSTALL_USER:$INSTALL_USER" "/home/$INSTALL_USER/.config"
-}
-
-write_arch_boot_entry() {
-    local root_uuid
-    root_uuid="$(blkid -s UUID -o value "$ROOT_PART")"
-
-    mkdir -p "$MNT/boot/loader/entries"
-    cat > "$MNT/boot/loader/entries/arch.conf" <<EOF
-title   Arch Linux
-linux   /vmlinuz-linux
-initrd  /intel-ucode.img
-initrd  /initramfs-linux.img
-options root=UUID=$root_uuid rootflags=subvol=@ rw
-EOF
-}
-
-install_temporary_bootstrap_sudoers() {
-    TEMP_SUDOERS_PATH="$MNT/etc/sudoers.d/99-bootstrap-nopasswd"
-    printf '%s ALL=(ALL:ALL) NOPASSWD: ALL\n' "$INSTALL_USER" > "$TEMP_SUDOERS_PATH"
-    chmod 440 "$TEMP_SUDOERS_PATH"
-}
-
-remove_temporary_bootstrap_sudoers() {
-    if [ -n "$TEMP_SUDOERS_PATH" ] && [ -e "$TEMP_SUDOERS_PATH" ]; then
-        rm -f "$TEMP_SUDOERS_PATH"
-    fi
-    TEMP_SUDOERS_PATH=""
-}
-
-run_bootstrap_in_chroot() {
-    log "Running bootstrap inside arch-chroot..."
-
-    mkdir -p "$MNT/var/log/install-arch"
-    install_temporary_bootstrap_sudoers
-    arch-chroot "$MNT" /bin/bash -lc "cd /home/$INSTALL_USER/.config && ./bootstrap.sh --context arch-chroot --target-user $INSTALL_USER" \
-        2>&1 | tee "$MNT/var/log/install-arch/bootstrap.log"
-    remove_temporary_bootstrap_sudoers
-    date -Iseconds > "$MNT/var/log/install-arch/bootstrap.completed"
-}
-
-find_latest_alpine_minrootfs() {
-    curl -fsSL "$ALPINE_RELEASES_URL" \
-        | grep -oE 'alpine-minirootfs-[0-9.]+-x86_64\.tar\.gz' \
-        | sort -V \
-        | tail -n1
-}
-
-cleanup_recovery_bind_mounts() {
-    local path
-    for path in run sys proc dev; do
-        if mountpoint -q "$MNT/recovery/$path"; then
-            umount "$MNT/recovery/$path"
-        fi
-    done
-}
-
-write_recovery_boot_entry() {
-    local recovery_uuid
-    recovery_uuid="$(blkid -s UUID -o value "$RECOVERY_PART")"
-
-    mkdir -p "$MNT/boot/loader/entries"
-    cat > "$MNT/boot/loader/entries/recovery.conf" <<EOF
-title   Recovery (Alpine)
-linux   /alpine/vmlinuz-alpine
-initrd  /alpine/initramfs-alpine
-options root=UUID=$recovery_uuid rw
-EOF
-}
-
-install_alpine_recovery() {
-    log "Installing Alpine recovery system..."
-
-    local archive_name
-    archive_name="$(find_latest_alpine_minrootfs)"
-    [ -n "$archive_name" ] || die "Could not determine the latest Alpine minirootfs filename."
-
-    ALPINE_ARCHIVE="$(mktemp /tmp/alpine-minirootfs.XXXXXX.tar.gz)"
-    curl -fL "$ALPINE_RELEASES_URL$archive_name" -o "$ALPINE_ARCHIVE"
-    tar xzf "$ALPINE_ARCHIVE" -C "$MNT/recovery"
-
-    (
-        trap cleanup_recovery_bind_mounts EXIT
-
-        mount --bind /dev "$MNT/recovery/dev"
-        mount --bind /proc "$MNT/recovery/proc"
-        mount --bind /sys "$MNT/recovery/sys"
-        mount --bind /run "$MNT/recovery/run"
-
-        cp /etc/resolv.conf "$MNT/recovery/etc/resolv.conf"
-        chroot "$MNT/recovery" /bin/sh -ec '
-            export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            /sbin/apk update
-            /sbin/apk add btrfs-progs vim e2fsprogs dosfstools util-linux linux-lts
-        '
-
-        log "Set the root password for Alpine recovery."
-        chroot "$MNT/recovery" /bin/sh -ec '
-            export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            passwd root
-        '
-    )
-
-    mkdir -p "$MNT/boot/alpine"
-    cp "$MNT/recovery/boot/vmlinuz-lts" "$MNT/boot/alpine/vmlinuz-alpine"
-    cp "$MNT/recovery/boot/initramfs-lts" "$MNT/boot/alpine/initramfs-alpine"
-    write_recovery_boot_entry
 }
 
 finalize_install() {
     log "Syncing filesystem state..."
     sync
-
-    if mountpoint -q "$MNT"; then
-        umount -R "$MNT"
-    fi
+    cleanup_target_mounts
 
     log "Install complete."
-    log "Remove the USB drive and run: reboot"
+    log "Reboot into Arch, connect to the network, clone your dotfiles, and run bootstrap.sh once."
 }
 
 main() {
@@ -490,15 +477,9 @@ main() {
     confirm_destructive_action
     partition_disk
     format_and_mount_filesystems
-    install_arch_base
-    seed_target_resolver
-    configure_arch_system
-    set_arch_passwords
-    copy_repo_into_target
-    write_arch_boot_entry
-    install_alpine_recovery
-    run_bootstrap_in_chroot
-    configure_installed_resolver
+    write_archinstall_inputs
+    run_archinstall
+    post_install_system_tweaks
     finalize_install
 }
 
