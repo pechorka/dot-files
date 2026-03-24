@@ -7,7 +7,6 @@ shell-integration = detect
 cursor-click-to-move = true
 
 # Copy & paste
-copy-on-select = clipboard
 clipboard-trim-trailing-spaces = true
 clipboard-paste-protection = true
 clipboard-paste-bracketed-safe = true
