@@ -28,3 +28,4 @@ link-url = true
 window-inherit-working-directory = false
 tab-inherit-working-directory = true
 split-inherit-working-directory = true
+font-size = 28
