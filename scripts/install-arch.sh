@@ -81,9 +81,9 @@ read -rp "Type WIPE to continue: " answer
 UUID1=$(cat /proc/sys/kernel/random/uuid)
 UUID2=$(cat /proc/sys/kernel/random/uuid)
 
-# Compute BTRFS partition size: total disk minus 1 GiB for EFI, in MiB
+# Compute BTRFS partition size: total disk minus 1 GiB for EFI minus 1 MiB for GPT backup header
 DISK_BYTES=$(lsblk -bdno SIZE "$DISK" | head -1)
-BTRFS_SIZE_MIB=$(( (DISK_BYTES / 1048576) - 1024 ))
+BTRFS_SIZE_MIB=$(( (DISK_BYTES / 1048576) - (1024 * 2) ))
 
 CONFIG=$(cat <<EOF
 {
