@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-GREEN='\033[0;32m' YELLOW='\033[1;33m' RED='\033[0;31m' BOLD='\033[1m' NC='\033[0m'
+GREEN=$'\033[0;32m' YELLOW=$'\033[1;33m' RED=$'\033[0;31m' BOLD=$'\033[1m' NC=$'\033[0m'
 log()  { printf "${GREEN}[install-arch]${NC} %s\n" "$*"; }
 warn() { printf "${YELLOW}[install-arch]${NC} %s\n" "$*"; }
 die()  { printf "${RED}[install-arch]${NC} %s\n" "$*" >&2; exit 1; }
@@ -94,10 +94,10 @@ CONFIG=$(cat <<EOF
       "partitions": [
         {
           "btrfs": [], "flags": ["boot"], "fs_type": "fat32",
-          "size": { "sector_size": null, "unit": "GiB", "value": 1 },
+          "size": { "sector_size": { "value": 512, "unit": "B" }, "unit": "GiB", "value": 1 },
           "mount_options": [], "mountpoint": "/efi",
           "obj_id": "$UUID1",
-          "start": { "sector_size": null, "unit": "MiB", "value": 1 },
+          "start": { "sector_size": { "value": 512, "unit": "B" }, "unit": "MiB", "value": 1 },
           "status": "create", "type": "primary"
         },
         {
@@ -107,11 +107,11 @@ CONFIG=$(cat <<EOF
             { "name": "@var",  "mountpoint": "/var" }
           ],
           "flags": [], "fs_type": "btrfs",
-          "size": { "sector_size": null, "unit": "Percent", "value": 100 },
+          "size": { "sector_size": { "value": 512, "unit": "B" }, "unit": "Percent", "value": 100 },
           "mount_options": ["compress=zstd", "noatime"],
           "mountpoint": null,
           "obj_id": "$UUID2",
-          "start": { "sector_size": null, "unit": "GiB", "value": 1 },
+          "start": { "sector_size": { "value": 512, "unit": "B" }, "unit": "GiB", "value": 1 },
           "status": "create", "type": "primary"
         }
       ],
