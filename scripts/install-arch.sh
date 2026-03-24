@@ -81,6 +81,10 @@ read -rp "Type WIPE to continue: " answer
 UUID1=$(cat /proc/sys/kernel/random/uuid)
 UUID2=$(cat /proc/sys/kernel/random/uuid)
 
+# Compute BTRFS partition size: total disk minus 1 GiB for EFI, in MiB
+DISK_BYTES=$(lsblk -bdno SIZE "$DISK" | head -1)
+BTRFS_SIZE_MIB=$(( (DISK_BYTES / 1048576) - 1024 ))
+
 CONFIG=$(cat <<EOF
 {
   "archinstall-language": "English",
@@ -94,7 +98,7 @@ CONFIG=$(cat <<EOF
       "partitions": [
         {
           "dev_path": null,
-          "btrfs": [], "flags": ["boot"], "fs_type": "fat32",
+          "btrfs": [], "flags": ["Boot"], "fs_type": "fat32",
           "size": { "sector_size": { "value": 512, "unit": "B" }, "unit": "GiB", "value": 1 },
           "mount_options": [], "mountpoint": "/efi",
           "obj_id": "$UUID1",
@@ -109,11 +113,11 @@ CONFIG=$(cat <<EOF
             { "name": "@var",  "mountpoint": "/var" }
           ],
           "flags": [], "fs_type": "btrfs",
-          "size": { "sector_size": { "value": 512, "unit": "B" }, "unit": "Percent", "value": 100 },
+          "size": { "sector_size": { "value": 512, "unit": "B" }, "unit": "MiB", "value": $BTRFS_SIZE_MIB },
           "mount_options": ["compress=zstd", "noatime"],
           "mountpoint": null,
           "obj_id": "$UUID2",
-          "start": { "sector_size": { "value": 512, "unit": "B" }, "unit": "GiB", "value": 1 },
+          "start": { "sector_size": { "value": 512, "unit": "B" }, "unit": "MiB", "value": 1025 },
           "status": "create", "type": "primary"
         }
       ],
