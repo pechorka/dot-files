@@ -93,6 +93,7 @@ CONFIG=$(cat <<EOF
       "device": "$DISK",
       "partitions": [
         {
+          "dev_path": null,
           "btrfs": [], "flags": ["boot"], "fs_type": "fat32",
           "size": { "sector_size": { "value": 512, "unit": "B" }, "unit": "GiB", "value": 1 },
           "mount_options": [], "mountpoint": "/efi",
@@ -101,6 +102,7 @@ CONFIG=$(cat <<EOF
           "status": "create", "type": "primary"
         },
         {
+          "dev_path": null,
           "btrfs": [
             { "name": "@",     "mountpoint": "/" },
             { "name": "@home", "mountpoint": "/home" },
