@@ -13,9 +13,7 @@ fish/fish_variables
 !tmux
 !tmux/**
 
-!bootstrap.sh
 !bootstrap-fingerprint.sh
-!install-arch.sh
 
 !system
 !system/**
@@ -36,3 +34,6 @@ fish/fish_variables
 
 !btop
 !btop/**
+
+!scripts
+!scripts/**
