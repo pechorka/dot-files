@@ -59,6 +59,10 @@ prompt "Username"                                USERNAME valid_username "Use a 
 log "Timezone examples: Europe/Berlin, America/New_York, Asia/Almaty"
 prompt "Timezone"                                TIMEZONE valid_timezone "Not found in /usr/share/zoneinfo."
 
+echo
+read -rp "Root password: " ROOT_PASSWORD
+read -rp "User password (for $USERNAME): " USER_PASSWORD
+
 # ── Confirm ──────────────────────────────────────────────────────────────────
 
 echo
@@ -67,7 +71,7 @@ log "  Disk:       $DISK"
 log "  Hostname:   $HOSTNAME"
 log "  Username:   $USERNAME"
 log "  Timezone:   $TIMEZONE"
-log "  Layout:     EFI 1G (/efi) + BTRFS (rest)"
+log "  Layout:     EFI 1G (/boot) + BTRFS (rest)"
 log "  Subvolumes: @, @home, @var"
 log "  Bootloader: GRUB + grub-btrfs"
 log "  Dotfiles:   $DOTFILES_DIR → /home/$USERNAME/.config/dot-files"
@@ -81,7 +85,7 @@ read -rp "Type WIPE to continue: " answer
 UUID1=$(cat /proc/sys/kernel/random/uuid)
 UUID2=$(cat /proc/sys/kernel/random/uuid)
 
-# Compute BTRFS partition size: total disk minus 1 GiB for EFI minus 1 MiB for GPT backup header
+# Compute BTRFS partition size: total disk minus 1 GiB for EFI minus 2 MiB for GPT backup header
 DISK_BYTES=$(lsblk -bdno SIZE "$DISK" | head -1)
 BTRFS_SIZE_MIB=$(( (DISK_BYTES / 1048576) - (1024 * 2) ))
 
@@ -100,7 +104,7 @@ CONFIG=$(cat <<EOF
           "dev_path": null,
           "btrfs": [], "flags": ["Boot"], "fs_type": "fat32",
           "size": { "sector_size": { "value": 512, "unit": "B" }, "unit": "GiB", "value": 1 },
-          "mount_options": [], "mountpoint": "/efi",
+          "mount_options": [], "mountpoint": "/boot",
           "obj_id": "$UUID1",
           "start": { "sector_size": { "value": 512, "unit": "B" }, "unit": "MiB", "value": 1 },
           "status": "create", "type": "primary"
@@ -156,7 +160,8 @@ EOF
 
 CREDS=$(cat <<EOF
 {
-  "!users": [{ "!password": null, "sudo": true, "username": "$USERNAME" }]
+  "!root-password": "$ROOT_PASSWORD",
+  "!users": [{ "!password": "$USER_PASSWORD", "sudo": true, "username": "$USERNAME" }]
 }
 EOF
 )
@@ -179,7 +184,7 @@ echo "$CONFIG" > "$tmpdir/user_configuration.json"
 echo "$CREDS"  > "$tmpdir/user_credentials.json"
 
 log "Handing off to archinstall..."
-archinstall --config "$tmpdir/user_configuration.json" --creds "$tmpdir/user_credentials.json"
+archinstall --config "$tmpdir/user_configuration.json" --creds "$tmpdir/user_credentials.json" --silent
 
 # ── Copy dotfiles into the new system ────────────────────────────────────────
 
