@@ -71,7 +71,7 @@ log "  Disk:       $DISK"
 log "  Hostname:   $HOSTNAME"
 log "  Username:   $USERNAME"
 log "  Timezone:   $TIMEZONE"
-log "  Layout:     EFI 1G (/boot) + BTRFS (rest)"
+log "  Layout:     EFI 1G (/efi) + BTRFS (rest)"
 log "  Subvolumes: @, @home, @var"
 log "  Bootloader: GRUB + grub-btrfs"
 log "  Dotfiles:   $DOTFILES_DIR → /home/$USERNAME/.config/dot-files"
@@ -104,7 +104,7 @@ CONFIG=$(cat <<EOF
           "dev_path": null,
           "btrfs": [], "flags": ["Boot"], "fs_type": "fat32",
           "size": { "sector_size": { "value": 512, "unit": "B" }, "unit": "GiB", "value": 1 },
-          "mount_options": [], "mountpoint": "/boot",
+          "mount_options": [], "mountpoint": "/efi",
           "obj_id": "$UUID1",
           "start": { "sector_size": { "value": 512, "unit": "B" }, "unit": "MiB", "value": 1 },
           "status": "create", "type": "primary"
