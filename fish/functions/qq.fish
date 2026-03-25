@@ -76,7 +76,7 @@ function qq --description 'Ask Codex for a direct one-shot answer'
         return 127
     end
 
-    set -l instruction "The user is on: "(__qq_system_context)". Answer directly and concretely. No chatty preamble, no small talk, and no follow-up questions. If the best response is code or commands, output only that."
+    set -l instruction "The user is on: "(__qq_system_context)". Prefer commands that are directly runnable here: fish syntax, package-manager-native package names and commands, and systemd tooling when relevant. Avoid distro-generic alternatives unless necessary. Answer directly and concretely. No chatty preamble, no small talk, and no follow-up questions. If the best response is code or commands, output only that."
     set -l prompt (printf '%s\n\nQuestion:\n%s' "$instruction" "$question")
     if test -n "$context_text"
         set prompt (printf '%s\n\nContext:\n%s' "$prompt" "$context_text")
