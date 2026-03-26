@@ -44,7 +44,7 @@ function display-save --description "Save current sway display configuration"
             . as $o |
             ($o.current_mode.refresh / 1000) as $hz |
             (if ($hz == ($hz | floor)) then ($hz | floor | tostring) else ($hz | tostring) end) as $hz_str |
-            "output \($o.name) resolution \($o.current_mode.width)x\($o.current_mode.height)@\($hz_str)Hz position \($o.rect.x),\($o.rect.y) scale \($o.scale) transform \($o.transform)"
+            "output \($o.name) resolution \($o.current_mode.width)x\($o.current_mode.height)@\($hz_str)Hz position \($o.rect.x) \($o.rect.y) scale \($o.scale) transform \($o.transform)"
         else
             "output \(.name) disable"
         end

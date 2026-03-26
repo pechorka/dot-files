@@ -13,7 +13,17 @@ KEY=$(swaymsg -t get_outputs 2>/dev/null \
 [ -z "$KEY" ] && exit 0
 
 CONFIG_FILE="${OUTPUTS_DIR}/${KEY}.conf"
-[ -f "$CONFIG_FILE" ] || exit 0
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    # No saved config for this combination — enable all connected outputs
+    # so sway uses its defaults rather than leaving outputs disabled.
+    swaymsg -t get_outputs 2>/dev/null \
+        | jq -r '.[] | "output \(.name) enable"' \
+        | while IFS= read -r line; do
+            swaymsg "$line"
+        done
+    exit 0
+fi
 
 while IFS= read -r line; do
     [ -z "$line" ] && continue
