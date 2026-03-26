@@ -17,4 +17,9 @@ fish_add_path --append "$HOME/.npm-global/bin"
 
 fish_add_path --append "$HOME/go/bin"
 
+set -gx ANDROID_HOME /opt/android-sdk
+fish_add_path $ANDROID_HOME/cmdline-tools/latest/bin
+fish_add_path $ANDROID_HOME/platform-tools
+fish_add_path $ANDROID_HOME/emulator
+
 __ensure_ssh_agent
