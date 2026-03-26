@@ -73,17 +73,17 @@ function work-vnc --description "SSH into server, start VNC, forward port, launc
 
         echo "Starting x0vncserver on $SERVER (mirroring real desktop)..."
         if test $NO_AUTH -eq 1
-            ssh -S $SOCK $SERVER "pkill x0vncserver 2>/dev/null; x0vncserver -localhost yes -SecurityTypes None -display :0 &"
+            ssh -S $SOCK $SERVER "pkill x0vncserver 2>/dev/null; nohup x0vncserver -localhost yes -SecurityTypes None -display :0 </dev/null >/dev/null 2>&1 & nohup env DISPLAY=:0 vncconfig -nowin </dev/null >/dev/null 2>&1 &"
         else
-            ssh -S $SOCK $SERVER "pkill x0vncserver 2>/dev/null; x0vncserver -localhost yes -display :0 &"
+            ssh -S $SOCK $SERVER "pkill x0vncserver 2>/dev/null; nohup x0vncserver -localhost yes -display :0 </dev/null >/dev/null 2>&1 & nohup env DISPLAY=:0 vncconfig -nowin </dev/null >/dev/null 2>&1 &"
         end
     else
         # Start a separate VNC session
         echo "Starting VNC server on $SERVER..."
         if test $NO_AUTH -eq 1
-            ssh -S $SOCK $SERVER "vncserver -kill $VNC_DISPLAY 2>/dev/null; vncserver $VNC_DISPLAY -geometry $RESOLUTION -localhost yes -SecurityTypes None"
+            ssh -S $SOCK $SERVER "vncserver -kill $VNC_DISPLAY 2>/dev/null; vncserver $VNC_DISPLAY -geometry $RESOLUTION -localhost yes -SecurityTypes None && nohup env DISPLAY=$VNC_DISPLAY vncconfig -nowin </dev/null >/dev/null 2>&1 &"
         else
-            ssh -S $SOCK $SERVER "vncserver -kill $VNC_DISPLAY 2>/dev/null; vncserver $VNC_DISPLAY -geometry $RESOLUTION -localhost yes"
+            ssh -S $SOCK $SERVER "vncserver -kill $VNC_DISPLAY 2>/dev/null; vncserver $VNC_DISPLAY -geometry $RESOLUTION -localhost yes && nohup env DISPLAY=$VNC_DISPLAY vncconfig -nowin </dev/null >/dev/null 2>&1 &"
         end
     end
 
