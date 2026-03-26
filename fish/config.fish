@@ -15,4 +15,6 @@ fish_add_path --append "$HOME/.local/bin"
 set -gx NPM_CONFIG_PREFIX "$HOME/.npm-global"
 fish_add_path --append "$HOME/.npm-global/bin"
 
+fish_add_path --append "$HOME/go/bin"
+
 __ensure_ssh_agent
