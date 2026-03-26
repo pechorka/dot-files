@@ -105,6 +105,7 @@ exec swayidle -w \
     timeout 600 '$lock' \
     before-sleep '$lock' \
     lock '$lock'
+exec_always ~/.config/scripts/display-restore.sh
 
 bar {
     font Liberation Sans 12

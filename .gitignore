@@ -26,6 +26,8 @@ fish/fish_variables
 
 !sway
 !sway/**
+sway/outputs/
+sway/outputs/**
 
 !ghostty
 !ghostty/**
