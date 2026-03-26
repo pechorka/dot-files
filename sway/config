@@ -78,7 +78,7 @@ set $satty satty --filename - --fullscreen --copy-command wl-copy --initial-tool
 bindsym Mod1+p exec grim -g "$(slurp -d)" -t ppm - | $satty
 
 # Alt+Shift+P: quick region screenshot straight to clipboard
-bindsym Mod1+Shift+p exec grim -g "$(slurp -d)" - | wl-copy --disable-notifications
+bindsym Mod1+Shift+p exec grim -g "$(slurp -d)" - | wl-copy
 
 # Lock screen
 bindsym $mod+Escape exec $lock
