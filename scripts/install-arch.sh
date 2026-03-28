@@ -93,7 +93,7 @@ CONFIG=$(cat <<EOF
 {
   "archinstall-language": "English",
   "audio_config": null,
-  "bootloader_config": { "bootloader": "Grub", "uki": false, "removable": false },
+  "bootloader_config": { "bootloader": "Grub", "uki": false, "removable": true },
   "debug": false,
   "disk_config": {
     "config_type": "manual_partitioning",
