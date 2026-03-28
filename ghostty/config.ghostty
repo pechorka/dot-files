@@ -29,3 +29,5 @@ window-inherit-working-directory = false
 tab-inherit-working-directory = true
 split-inherit-working-directory = true
 font-size = 28
+# disable ligatures
+font-feature = -calt, -liga, -dlig
