@@ -199,21 +199,6 @@ for attempt in $(seq 1 $MAX_RETRIES); do
   sleep 5
 done
 
-# ── Copy dotfiles into the new system ────────────────────────────────────────
-
-MOUNT_ROOT="/mnt/archinstall"
-DEST="$MOUNT_ROOT/home/$USERNAME/.config/dot-files"
-
-if [[ -d "$MOUNT_ROOT/home/$USERNAME" ]]; then
-  log "Copying dotfiles to $DEST..."
-  mkdir -p "$DEST"
-  cp -a "$DOTFILES_DIR/." "$DEST/"
-  arch-chroot "$MOUNT_ROOT" chown -R "$USERNAME:$USERNAME" "/home/$USERNAME/.config/dot-files"
-  log "Dotfiles installed."
-else
-  warn "$MOUNT_ROOT/home/$USERNAME not found — copy dotfiles manually after reboot."
-fi
-
 log "Install complete."
 log ""
 log "Next steps:"
