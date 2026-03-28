@@ -56,7 +56,7 @@ PACMAN_PACKAGES=(
   # Snapshots
   snapper snap-pac
   # Shells & editors
-  fish tmux
+  ghostty fish tmux
   # CLI tools
   ripgrep fzf fd jq bat curl wget lazygit openssh less btop
   # Go
@@ -85,7 +85,7 @@ PACMAN_PACKAGES=(
   # Misc
   bubblewrap mise base-devel keychain
   # AUR (via chaotic-aur)
-  ghostty yq-go neovim-nightly-bin quickemu handy
+  neovim-nightly-bin quickemu
 )
 
 log "Upgrading system..."
