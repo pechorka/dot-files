@@ -72,7 +72,7 @@ log "  Hostname:   $HOSTNAME"
 log "  Username:   $USERNAME"
 log "  Timezone:   $TIMEZONE"
 log "  Layout:     EFI 1G (/efi) + BTRFS (rest)"
-log "  Subvolumes: @, @home, @var"
+log "  Subvolumes: @, @home, @log, @pkg"
 log "  Bootloader: GRUB + grub-btrfs"
 log "  Dotfiles:   $DOTFILES_DIR → /home/$USERNAME/.config/dot-files"
 echo
@@ -102,7 +102,7 @@ CONFIG=$(cat <<EOF
       "partitions": [
         {
           "dev_path": null,
-          "btrfs": [], "flags": ["Boot"], "fs_type": "fat32",
+          "btrfs": [], "flags": ["Boot", "ESP"], "fs_type": "fat32",
           "size": { "sector_size": { "value": 512, "unit": "B" }, "unit": "GiB", "value": 1 },
           "mount_options": [], "mountpoint": "/efi",
           "obj_id": "$UUID1",
@@ -114,7 +114,8 @@ CONFIG=$(cat <<EOF
           "btrfs": [
             { "name": "@",     "mountpoint": "/" },
             { "name": "@home", "mountpoint": "/home" },
-            { "name": "@var",  "mountpoint": "/var" }
+            { "name": "@log",  "mountpoint": "/var/log" },
+            { "name": "@pkg",  "mountpoint": "/var/cache/pacman/pkg" }
           ],
           "flags": [], "fs_type": "btrfs",
           "size": { "sector_size": { "value": 512, "unit": "B" }, "unit": "MiB", "value": $BTRFS_SIZE_MIB },
