@@ -141,7 +141,7 @@ CONFIG=$(cat <<EOF
     "networkmanager", "sudo", "vim", "git", "python", "base-devel",
     "snapper", "snap-pac"
   ],
-  "parallel downloads": 0,
+  "parallel downloads": 5,
   "swap": true,
   "timezone": "$TIMEZONE",
   "custom-commands": [
@@ -184,8 +184,21 @@ trap 'rm -rf "$tmpdir"' EXIT
 echo "$CONFIG" > "$tmpdir/user_configuration.json"
 echo "$CREDS"  > "$tmpdir/user_credentials.json"
 
-log "Handing off to archinstall..."
-archinstall --config "$tmpdir/user_configuration.json" --creds "$tmpdir/user_credentials.json" --silent
+log "Ranking mirrors with reflector..."
+reflector --latest 10 --sort rate --save /etc/pacman.d/mirrorlist
+
+MAX_RETRIES=3
+for attempt in $(seq 1 $MAX_RETRIES); do
+  log "Handing off to archinstall (attempt $attempt/$MAX_RETRIES)..."
+  if archinstall --config "$tmpdir/user_configuration.json" --creds "$tmpdir/user_credentials.json" --silent; then
+    break
+  fi
+  if (( attempt == MAX_RETRIES )); then
+    die "archinstall failed after $MAX_RETRIES attempts."
+  fi
+  warn "archinstall failed — retrying in 5 seconds..."
+  sleep 5
+done
 
 # ── Copy dotfiles into the new system ────────────────────────────────────────
 
