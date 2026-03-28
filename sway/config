@@ -1,5 +1,5 @@
 set $mod Mod4
-set $term ghostty
+set $term sh -c 'systemd-detect-virt -q && exec foot || exec ghostty'
 set $menu wofi --show drun
 set $lock swaylock -f -c 000000
 
