@@ -49,6 +49,8 @@ valid_disk() {
   return 0
 }
 
+valid_country() { reflector --list-countries 2>/dev/null | grep -qi "$1"; }
+
 log "Available disks:"
 lsblk -d -e 7,11 -o PATH,SIZE,MODEL --noheadings
 echo
@@ -58,6 +60,8 @@ prompt "Hostname"                                HOSTNAME valid_hostname "Use le
 prompt "Username"                                USERNAME valid_username "Use a lowercase Linux username."
 log "Timezone examples: Europe/Berlin, America/New_York, Asia/Almaty"
 prompt "Timezone"                                TIMEZONE valid_timezone "Not found in /usr/share/zoneinfo."
+log "Mirror country examples: US, Germany, Kazakhstan"
+prompt "Mirror country"                          MIRROR_COUNTRY valid_country "Not found in reflector country list."
 
 echo
 read -rp "Root password: " ROOT_PASSWORD
@@ -184,8 +188,8 @@ trap 'rm -rf "$tmpdir"' EXIT
 echo "$CONFIG" > "$tmpdir/user_configuration.json"
 echo "$CREDS"  > "$tmpdir/user_credentials.json"
 
-log "Ranking mirrors with reflector..."
-reflector --latest 10 --sort rate --save /etc/pacman.d/mirrorlist
+log "Ranking mirrors with reflector (country: $MIRROR_COUNTRY)..."
+reflector --country "$MIRROR_COUNTRY" --latest 10 --sort rate --save /etc/pacman.d/mirrorlist
 
 MAX_RETRIES=3
 for attempt in $(seq 1 $MAX_RETRIES); do
