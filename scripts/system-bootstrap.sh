@@ -22,8 +22,14 @@ USER_ID="$(id -u "$USER")"
 GROUP_ID="$(id -g "$USER")"
 DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-run_as_user() { sudo -u "$USER" -H -- "$@"; }
-is_pkg()      { pacman -Qi "$1" &>/dev/null; }
+run_as_user()  { sudo -u "$USER" -H -- "$@"; }
+run_user_dbus() {
+  run_as_user env \
+    XDG_RUNTIME_DIR="/run/user/$USER_ID" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$USER_ID/bus" \
+    "$@"
+}
+is_pkg()       { pacman -Qi "$1" &>/dev/null; }
 
 install_system_file() {
   local src="$1" dest="$2" mode="${3:-644}"
@@ -44,7 +50,7 @@ log "Bootstrap starting... (dotfiles: $DOTFILES_DIR, user: $USER)"
 
 PACMAN_PACKAGES=(
   # Display & compositor
-  sway swaylock swayidle xdg-desktop-portal-wlr xorg-xwayland wdisplays
+  sway swaylock swayidle xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr xorg-xwayland wdisplays
   # Audio
   pipewire pipewire-pulse pipewire-jack sof-firmware wireplumber
   # Graphics (Intel)
@@ -83,7 +89,7 @@ PACMAN_PACKAGES=(
   # Fonts
   noto-fonts noto-fonts-emoji ttf-font-awesome ttf-liberation
   # Misc
-  bubblewrap mise base-devel keychain
+  bubblewrap mise base-devel keychain dconf
   # AUR (via chaotic-aur)
   neovim-nightly-bin quickemu
 )
@@ -168,6 +174,14 @@ fi
 
 install_user_file "$DOTFILES_DIR/git/gitconfig" "$USER_HOME/.gitconfig" \
   && log "Installed .gitconfig"
+
+if [[ -S "/run/user/$USER_ID/bus" ]] && command -v gsettings &>/dev/null; then
+  run_user_dbus gsettings set org.gnome.desktop.interface color-scheme prefer-dark
+  run_user_dbus gsettings set org.gnome.desktop.interface gtk-theme Adwaita-dark
+  log "Configured dark GTK/system theme preference"
+else
+  warn "User D-Bus session unavailable, skipping dark theme preference"
+fi
 
 # ── Services ─────────────────────────────────────────────────────────────────
 

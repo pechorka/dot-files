@@ -106,6 +106,7 @@ It also:
 - enables `grub-btrfsd.service` and `snapper-cleanup.timer`
 - disables `snapper-timeline.timer`
 - disables `NetworkManager-wait-online.service` after bootstrap is done
+- sets the user GTK/libadwaita preference to dark so portals and browsers can expose `prefers-color-scheme: dark`
 
 The retention policy is cleanup-only with `NUMBER_LIMIT=6` and `NUMBER_LIMIT_IMPORTANT=6`.
 

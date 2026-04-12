@@ -100,6 +100,8 @@ input type:touchpad {
 default_border none
 floating_modifier $mod normal
 
+exec_always systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP
+exec_always dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP=sway XDG_SESSION_TYPE=wayland XDG_SESSION_DESKTOP=sway
 exec --no-startup-id /usr/bin/lxqt-policykit-agent
 exec swayidle -w \
     timeout 600 '$lock' \
